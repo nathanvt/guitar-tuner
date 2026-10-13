@@ -8,8 +8,16 @@ import { WARNING } from './pixelfont.ts';
 type Power = 'off' | 'starting' | 'on' | 'error';
 type Glow = 'off' | 'low' | 'hi';
 
-// How long the last note lingers after the string goes quiet.
+// A reading counts as live for this long after the detector last heard the note,
+// so brief gaps in detection don't dim it.
+const LIVE_MS = 150;
+// How long the last note lingers, dimmed, after the string goes quiet.
 const HOLD_MS = 1500;
+// While a spot-on note is confirmed and the mic still hears sound, the reading
+// stays fully lit through detection gaps, for up to this long since the last
+// detection. The cap keeps talking or room noise from holding an old note up.
+const SUSTAIN_MS = 2500;
+const SOUND_LEVEL = 0.25;
 // Each green state is entered inside its band and left 1¢ outside it, so the
 // colors don't flicker at the edges.
 const HYSTERESIS_CENTS = 1;
@@ -75,6 +83,7 @@ let tuned = false;
 let close = false;
 let cents = 0;
 let strength = 0;
+let loudness = 0;
 let tunedAt = -Infinity;
 let lock = 0;
 let lockShown = '';
@@ -248,6 +257,7 @@ function stop() {
   note = null;
   heardAt = -Infinity;
   strength = 0;
+  loudness = 0;
   grille.draw(0);
   setPower('off');
 }
@@ -303,7 +313,8 @@ function setGlow(glow: Glow) {
 function loop(now: number) {
   if (audio) {
     audio.analyser.getFloatTimeDomainData(samples);
-    grille.draw(inputLevel(samples));
+    loudness = inputLevel(samples);
+    grille.draw(loudness);
     const hz = audio.tracker.update(samples);
     if (hz !== null) {
       note = noteFromFrequency(hz);
@@ -330,7 +341,8 @@ function paint(now: number) {
   }
 
   const age = now - heardAt;
-  const live = power === 'on' && age < 50;
+  const sustained = lock > 0.05 && loudness > SOUND_LEVEL && age < SUSTAIN_MS;
+  const live = power === 'on' && (age < LIVE_MS || sustained);
   const held = power === 'on' && !live && age < HOLD_MS;
 
   if ((live || held) && note) {

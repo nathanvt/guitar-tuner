@@ -144,12 +144,12 @@ p {
   transform: translateY(var(--shift, 0px)) scale(var(--fit, 1));
 }
 
-/* Once a note has held in tune, a faint green light falls from the top of the screen. */
+/* Once a note has held spot on, a faint green light falls from the top of the screen. */
 .confirm {
   position: absolute;
   inset: 0 0 auto;
-  height: 50%;
-  background: linear-gradient(rgb(46 226 122 / 0.32), rgb(46 226 122 / 0.05) 50%, transparent);
+  height: 80%;
+  background: linear-gradient(rgb(46 226 122 / 0.26), rgb(46 226 122 / 0));
   opacity: var(--lock, 0);
   pointer-events: none;
 }
