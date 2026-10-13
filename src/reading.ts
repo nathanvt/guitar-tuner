@@ -4,7 +4,9 @@ import type { Note } from './pitch.ts';
 /*
   The reading, on open space: an arc of LED bars above a white pixel note.
     - Bars rest grey. The bar at the current pitch lights red and grows longer, so
-      both color and size carry the reading. In tune, the whole arc lights green.
+      both color and size carry the reading; its neighbors take a dim version of
+      its color. The scale is finer near the center, where the three center bars
+      cover the ±3¢ in-tune band. In tune, the whole arc lights green.
     - Between two bars, the light splits across both, so the reading glides.
     - Once a note has held in tune (`lock`), the green bars glow a little brighter.
     - Nothing is drawn where nothing is lit.
@@ -16,6 +18,10 @@ import type { Note } from './pitch.ts';
 const HALF = 8;
 /** The arc spans ±60° from straight up, leaving room for the note's side column below its ends. */
 const SWEEP = (60 * Math.PI) / 180;
+/** Below 1, bars near the center cover fewer cents: at 0.6, ±3¢ reaches the edge of the center three. */
+const CURVE = 0.6;
+/** How much of the lit color the bars either side of the reading take. */
+const NEIGHBOR = 0.35;
 /** How much longer a fully lit bar grows; the center bar is the target and always longer. */
 const GROW = 0.4;
 const CENTER = 1.25;
@@ -121,7 +127,9 @@ export class Reading {
   }
 
   private gauge(L: Layout, f: Frame) {
-    const position = Math.max(-HALF, Math.min(HALF, (f.cents / 50) * HALF));
+    const exact = Math.sign(f.cents) * Math.min(1, Math.abs(f.cents) / 50) ** CURVE * HALF;
+    // While in tune, the reading stays inside the green center three.
+    const position = f.tuned ? Math.max(-1, Math.min(1, exact)) : exact;
     const loading = f.mode === 'loading';
     const off = loading ? LOADING_DARK : IDLE;
     const on = loading ? LOADING_LIGHT : f.tuned ? GREEN : RED;
@@ -137,9 +145,11 @@ export class Reading {
         glow = ripple(f.time, i, RIPPLE_MS);
         grow = glow * 0.5;
       } else if (f.mode === 'live') {
-        const here = Math.max(0, 1 - Math.abs(i - position)) * f.strength;
+        const distance = Math.abs(i - position);
+        const here = Math.max(0, 1 - distance) * f.strength;
+        const beside = Math.max(0, 1 - Math.abs(distance - 1)) * NEIGHBOR * f.strength;
         grow = f.tuned && i === 0 ? f.strength : here;
-        glow = f.tuned ? f.strength : here;
+        glow = f.tuned ? f.strength : Math.max(here, beside);
         rest = ripple(f.time, i, IDLE_RIPPLE_MS) * IDLE_RIPPLE_DEPTH * (1 - f.strength);
       }
       const length = L.bar * (i === 0 ? CENTER : 1) * (1 + GROW * grow);
