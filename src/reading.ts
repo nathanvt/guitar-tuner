@@ -3,8 +3,8 @@ import type { Note } from './pitch.ts';
 
 /*
   The reading, on open space: an arc of LED bars above a white pixel note.
-    - Bars rest grey. The bar at the current pitch lights red, or green when in tune,
-      and grows longer, so both color and size carry the reading.
+    - Bars rest grey. The bar at the current pitch lights red and grows longer, so
+      both color and size carry the reading. In tune, the whole arc lights green.
     - Between two bars, the light splits across both, so the reading glides.
     - Nothing is drawn where nothing is lit.
     - The note letter sits dead center, under the center bar, and never moves; the
@@ -12,12 +12,12 @@ import type { Note } from './pitch.ts';
 */
 
 /** Bars on each side of the center bar. */
-const HALF = 12;
+const HALF = 8;
 /** The arc spans ±60° from straight up, leaving room for the note's side column below its ends. */
 const SWEEP = (60 * Math.PI) / 180;
 /** How much longer a fully lit bar grows; the center bar is the target and always longer. */
-const GROW = 0.5;
-const CENTER = 1.3;
+const GROW = 0.4;
+const CENTER = 1.25;
 
 const IDLE = [63, 67, 74];
 const RED = [255, 59, 47];
@@ -105,16 +105,19 @@ export class Reading {
     const on = f.mode === 'sweep' ? SWEEP_LIGHT : f.tuned ? GREEN : RED;
 
     for (let i = -HALF; i <= HALF; i++) {
-      let lit = 0;
+      // `glow` is how much of the lit color a bar takes; `grow` how much longer it gets.
+      let glow = 0;
+      let grow = 0;
       if (f.mode === 'sweep') {
-        lit = Math.max(0, 1 - Math.abs(i - head) / 1.5);
+        glow = grow = Math.max(0, 1 - Math.abs(i - head) / 1.5);
       } else {
-        lit = Math.max(0, 1 - Math.abs(i - position)) * f.strength;
-        if (f.tuned && i === 0) lit = Math.max(lit, f.strength);
+        const here = Math.max(0, 1 - Math.abs(i - position)) * f.strength;
+        grow = f.tuned && i === 0 ? f.strength : here;
+        glow = f.tuned ? f.strength : here;
       }
-      const length = L.bar * (i === 0 ? CENTER : 1) * (1 + GROW * lit);
-      const width = L.barWidth * (i === 0 ? 1.25 : 1);
-      this.bar(L, (i / HALF) * SWEEP, length, width, rgb(mix(IDLE, on, lit), f.brightness));
+      const length = L.bar * (i === 0 ? CENTER : 1) * (1 + GROW * grow);
+      const width = L.barWidth * (i === 0 ? 1.2 : 1);
+      this.bar(L, (i / HALF) * SWEEP, length, width, rgb(mix(IDLE, on, glow), f.brightness));
     }
   }
 
@@ -135,7 +138,7 @@ export class Reading {
     ctx.translate(L.cx, L.cy);
     ctx.rotate(angle);
     ctx.beginPath();
-    ctx.roundRect(-width / 2, -(inner + length), width, length, Math.min(2, width * 0.15));
+    ctx.roundRect(-width / 2, -(inner + length), width, length, Math.min(2, width * 0.12));
     ctx.fillStyle = color;
     ctx.fill();
     ctx.restore();
@@ -160,14 +163,14 @@ export class Reading {
 
 /** Sizes the arc to the space, then sets the note inside it. */
 function layout(width: number, height: number): Layout {
-  // The composition is about 2.2 radii tall and 2 radii wide.
-  const radius = Math.min(width * 0.46, (height - 24) / 2.2);
-  const bar = radius * 0.14;
+  // The composition is about 2.26 radii tall and 2.1 radii wide.
+  const radius = Math.min(width * 0.44, (height - 24) / 2.26);
+  const bar = radius * 0.2;
   const pitch = radius * 0.19;
   const small = pitch * 0.38;
   // The tallest mark is the lit center bar.
   const reach = radius - bar / 2 + bar * CENTER * (1 + GROW);
-  const top = (height - radius * 2.2) / 2;
+  const top = (height - radius * 2.26) / 2;
   const cx = width / 2;
   const cy = top + reach;
 
@@ -178,11 +181,11 @@ function layout(width: number, height: number): Layout {
     cy,
     radius,
     bar,
-    barWidth: radius * 0.052,
+    barWidth: radius * 0.08,
     pitch,
     small,
     noteX: cx - (GLYPH_WIDTH * pitch) / 2,
-    noteY: cy - radius * 0.34,
+    noteY: cy - radius * 0.3,
     sideX: cx + (GLYPH_WIDTH * pitch) / 2 + pitch * 0.35,
   };
 }

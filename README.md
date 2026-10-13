@@ -8,14 +8,15 @@ Vite + TypeScript, no framework. Pitch detection is [pitchy](https://github.com/
 
 A blocky, old-tech tuner: flat color blocks edge to edge. The reading lights up on open space above a control panel. The type is Unbounded (OFL), self-hosted from `@fontsource-variable/unbounded`, Latin subset only.
 
-- **Gauge** (`src/reading.ts`): an arc of 25 LED bars above the note, covering −50¢ to +50¢. The bars rest grey. The bar at the current pitch lights red, or green when you're within 3¢, and grows longer. Between two bars the light splits across both, so the reading glides. Nothing is drawn while the tuner is off.
+- **Gauge** (`src/reading.ts`): an arc of 17 wide LED bars above the note, covering −50¢ to +50¢. The bars rest grey. The bar at the current pitch lights red and grows longer; between two bars the light splits across both, so the reading glides. Within 3¢, the whole arc lights green. Nothing is drawn while the tuner is off.
 - **Note:** a white pixel letter, centered under the center bar. It never moves; the sharp and octave hang off its right side. No words appear while listening.
-- **Power:** a push-push key with an amber pilot light. A tap on the reading area also turns the tuner on, and leaving the app turns it off.
-- **Controls:** a second push-push key that folds open a dashboard with two dials (`src/dial.ts`):
-  - **Brightness** (0–10) for the reading.
-  - **Glow** (off, 1–4) for the light around the reading, the pilot light and the mic grille.
+- **Power:** a push-push key with a pilot light: red while off, green while on. A tap on the reading area also turns the tuner on, and leaving the app turns it off.
+- **Controls:** a second push-push key that opens a dashboard:
+  - **Brightness** dial (0–10), in `src/dial.ts`. Turn it by dragging up or right, or with the arrow keys.
+  - **Glow:** three interlocking keys, off / low / hi, for the light around the reading, the pilot light and the mic grille. Touching one latches it and releases the others.
 
-  Turn a dial by dragging up or right, or with the arrow keys. A tap on the glow dial steps it. Settings are saved in the browser. With the tuner off, the reading shows a preview while the dashboard is open.
+  Settings are saved in the browser. With the tuner off, the reading shows a preview while the dashboard is open.
+- Keys stay down until their action has run, then move straight to their new position, so a key never bounces between states.
 - **Mic grille** (`src/grille.ts`): sits over the phone's own microphone. Its holes light up from the left with input level.
 - Errors (mic blocked, busy, missing, no https) show as small text where the note goes. The power key pops back up and its pilot flashes.
 

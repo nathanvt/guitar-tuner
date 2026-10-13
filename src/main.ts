@@ -5,6 +5,7 @@ import { Grille } from './grille.ts';
 import { Dial } from './dial.ts';
 
 type Power = 'off' | 'starting' | 'on' | 'error';
+type Glow = 'off' | 'low' | 'hi';
 
 // How long the last note lingers after the string goes quiet.
 const HOLD_MS = 1500;
@@ -16,20 +17,18 @@ const FOLLOW = 0.3;
 const FADE_IN = 0.35;
 const FADE_OUT = 0.08;
 
-// The glow dial's five detents: off, then 1–4.
-const GLOW_LABELS = ['off', '1', '2', '3', '4'];
-const GLOW_LEVELS = [
-  { bloom: 0, blur: 0, led: 0 },
-  { bloom: 0.2, blur: 4, led: 4 },
-  { bloom: 0.35, blur: 6, led: 7 },
-  { bloom: 0.5, blur: 8, led: 10 },
-  { bloom: 0.68, blur: 10, led: 14 },
-];
+const GLOW: Record<Glow, { bloom: number; blur: number; led: number }> = {
+  off: { bloom: 0, blur: 0, led: 0 },
+  low: { bloom: 0.3, blur: 5, led: 6 },
+  hi: { bloom: 0.55, blur: 8, led: 11 },
+};
 // The brightness dial never goes fully dark.
 const MIN_BRIGHTNESS = 0.2;
 const SETTINGS_KEY = 'tuner.settings';
-// Shown while adjusting the dials with the tuner off, so the effect is visible.
+// Shown while adjusting the controls with the tuner off, so the effect is visible.
 const PREVIEW_NOTE = noteFromFrequency(440);
+// If a lifted finger never produces a click (it slid off the key), the key comes back up.
+const RELEASE_FALLBACK_MS = 400;
 
 const el = <T extends Element>(selector: string) => document.querySelector<T>(selector)!;
 
@@ -43,6 +42,7 @@ const ui = {
   power: el<HTMLButtonElement>('.key-power'),
   controls: el<HTMLButtonElement>('.key-controls'),
   dashboard: el<HTMLElement>('.dashboard'),
+  glowKeys: [...document.querySelectorAll<HTMLButtonElement>('[data-glow]')],
 };
 
 const reading = new Reading(el('.lights'), el('.bloom'));
@@ -67,24 +67,11 @@ let strength = 0;
 
 new Dial(el('[data-dial="brightness"]'), {
   scale: ['0', '', '2', '', '4', '', '6', '', '8', '', '10'],
-  stepped: false,
   value: settings.brightness,
   describe: (value) => `${Math.round(value * 10)} of 10`,
   onChange: (value) => {
     settings.brightness = value;
     saveSettings();
-    paint(performance.now());
-  },
-});
-new Dial(el('[data-dial="glow"]'), {
-  scale: GLOW_LABELS,
-  stepped: true,
-  value: settings.glow / (GLOW_LABELS.length - 1),
-  describe: (value) => GLOW_LABELS[Math.round(value * (GLOW_LABELS.length - 1))],
-  onChange: (value) => {
-    settings.glow = Math.round(value * (GLOW_LABELS.length - 1));
-    saveSettings();
-    applyGlow();
     paint(performance.now());
   },
 });
@@ -103,25 +90,37 @@ const resizer = new ResizeObserver((entries) => {
 resizer.observe(ui.reading);
 resizer.observe(ui.grille);
 
-applyGlow();
+setGlow(settings.glow);
 setPower('off');
 
-// Keys move the instant a finger lands. Power acts on release, which iOS requires
-// before it will open the microphone.
-for (const key of [ui.power, ui.controls]) {
-  key.addEventListener('pointerdown', () => key.classList.add('pressed'));
-  for (const type of ['pointerup', 'pointercancel', 'pointerleave'] as const) {
-    key.addEventListener(type, () => key.classList.remove('pressed'));
-  }
-}
-ui.power.addEventListener('click', () => (power === 'on' || power === 'starting' ? stop() : start()));
-ui.controls.addEventListener('click', () => {
+pushKey(ui.power, () => (power === 'on' || power === 'starting' ? stop() : start()));
+pushKey(ui.controls, () => {
   panelOpen = !panelOpen;
   ui.device.dataset.panel = panelOpen ? 'open' : 'closed';
   ui.controls.setAttribute('aria-pressed', String(panelOpen));
-  ui.dashboard.inert = !panelOpen;
+  ui.dashboard.hidden = !panelOpen;
   paint(performance.now());
 });
+
+// Interlocking keys: touching one latches it at once and releases the others.
+for (const key of ui.glowKeys) {
+  const choose = () => {
+    const glow = key.dataset.glow as Glow;
+    if (glow === settings.glow) return;
+    settings.glow = glow;
+    saveSettings();
+    setGlow(glow);
+    paint(performance.now());
+  };
+  key.addEventListener('pointerdown', () => {
+    key.classList.add('pressed');
+    choose();
+  });
+  for (const type of ['pointerup', 'pointercancel', 'pointerleave'] as const) {
+    key.addEventListener(type, () => key.classList.remove('pressed'));
+  }
+  key.addEventListener('click', choose); // keyboard
+}
 
 ui.reading.addEventListener('click', () => {
   if (power === 'off' || power === 'error') start();
@@ -130,6 +129,36 @@ document.addEventListener('visibilitychange', () => {
   // Release the mic whenever the app leaves the screen.
   if (document.hidden && (power === 'on' || power === 'starting')) stop();
 });
+
+/**
+ * A push-push key. It goes down the instant a finger lands and stays down until its
+ * action has run, then moves straight to its new position: latched or out. Releasing
+ * it on finger-up instead would let it bounce up before the state flipped.
+ * The action runs on click, which iOS requires before it will open the microphone.
+ */
+function pushKey(key: HTMLButtonElement, action: () => void) {
+  let fallback = 0;
+  const release = () => {
+    clearTimeout(fallback);
+    key.classList.remove('pressed');
+  };
+  key.addEventListener('pointerdown', () => {
+    clearTimeout(fallback);
+    key.classList.add('pressed');
+  });
+  key.addEventListener('pointerup', () => {
+    fallback = window.setTimeout(release, RELEASE_FALLBACK_MS);
+  });
+  key.addEventListener('pointercancel', release);
+  key.addEventListener('pointerleave', (event) => {
+    // A touch keeps its key until it lifts; a mouse dragged off lets go.
+    if (event.pointerType === 'mouse') release();
+  });
+  key.addEventListener('click', () => {
+    action();
+    release();
+  });
+}
 
 async function start() {
   if (power === 'on' || power === 'starting') return;
@@ -225,6 +254,15 @@ function setPower(next: Power) {
   paint(performance.now());
 }
 
+function setGlow(glow: Glow) {
+  const level = GLOW[glow];
+  ui.device.style.setProperty('--bloom', String(level.bloom));
+  ui.device.style.setProperty('--bloom-blur', `${level.blur}px`);
+  ui.device.style.setProperty('--led-glow', `${level.led}px`);
+  grille.setGlow(level.led);
+  for (const key of ui.glowKeys) key.setAttribute('aria-checked', String(key.dataset.glow === glow));
+}
+
 function loop(now: number) {
   if (audio) {
     audio.analyser.getFloatTimeDomainData(samples);
@@ -275,21 +313,13 @@ function paint(now: number) {
   });
 }
 
-function applyGlow() {
-  const level = GLOW_LEVELS[settings.glow];
-  ui.device.style.setProperty('--bloom', String(level.bloom));
-  ui.device.style.setProperty('--bloom-blur', `${level.blur}px`);
-  ui.device.style.setProperty('--led-glow', `${level.led}px`);
-  grille.setGlow(level.led);
-}
-
-function loadSettings(): { brightness: number; glow: number } {
-  const defaults = { brightness: 0.8, glow: 2 };
+function loadSettings(): { brightness: number; glow: Glow } {
+  const defaults = { brightness: 0.8, glow: 'low' as Glow };
   try {
     const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? '{}');
     return {
       brightness: typeof saved.brightness === 'number' ? Math.min(1, Math.max(0, saved.brightness)) : defaults.brightness,
-      glow: Number.isInteger(saved.glow) && saved.glow >= 0 && saved.glow < GLOW_LEVELS.length ? saved.glow : defaults.glow,
+      glow: saved.glow in GLOW ? saved.glow : defaults.glow,
     };
   } catch {
     return defaults;

@@ -1,7 +1,7 @@
 /*
   A blocky, old-tech tuner: flat color blocks edge to edge, the reading lit on open
-  space above a control panel of hard-edged keys and dials. Red and green carry the
-  tuning; everything else is grey, cream and white.
+  space above a control panel of hard-edged keys and a dial. Red and green carry the
+  tuning and the power state; everything else is grey and white.
 */
 
 /* Unbounded (OFL), Latin only: the other subsets would add 160 KB this tuner never shows. */
@@ -23,9 +23,11 @@
   --panel: #1b1c1f;
   --well: #111214;
   --ink: #f2f1ec;
+  --legend: #c3c6cb;
   --print: #868b93;
   --print-strong: #b9bdc3;
-  --amber: #ffb84a;
+  --red: #ff3b2f;
+  --green: #2ee27a;
 
   font-family: 'Unbounded Variable', -apple-system, BlinkMacSystemFont, sans-serif;
   -webkit-text-size-adjust: 100%;
@@ -58,9 +60,9 @@ p {
 /* ---------- Layout ---------- */
 
 .device {
-  --bloom: 0.35;
-  --bloom-blur: 6px;
-  --led-glow: 7px;
+  --bloom: 0.3;
+  --bloom-blur: 5px;
+  --led-glow: 6px;
 
   display: flex;
   flex-direction: column;
@@ -85,7 +87,7 @@ p {
   letter-spacing: -0.04em;
 }
 
-/* Printed legends. */
+/* Printed legends on the panel. */
 .label {
   font-size: 9px;
   font-weight: 600;
@@ -114,7 +116,7 @@ p {
   height: 100%;
 }
 
-/* A blurred copy of the lights underneath them; its strength comes from the glow dial. */
+/* A blurred copy of the lights underneath them; its strength comes from the glow setting. */
 .reading .bloom {
   filter: blur(var(--bloom-blur));
   opacity: var(--bloom);
@@ -164,59 +166,69 @@ p {
 .panel {
   display: flex;
   flex-direction: column;
-  padding: 20px max(22px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom))
+  padding: 22px max(22px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom))
     max(22px, env(safe-area-inset-left));
   background: var(--panel);
 }
 
-/* The dashboard folds open above the keys and pushes the reading up. */
+/*
+  The dashboard opens in one step, so the reading re-lays out once rather than on
+  every frame of an animation. Only its own contents ease in.
+*/
 .dashboard {
-  display: grid;
-  grid-template-rows: 0fr;
-  transition: grid-template-rows 220ms ease-out;
-}
-
-[data-panel='open'] .dashboard {
-  grid-template-rows: 1fr;
-}
-
-.dials {
   display: flex;
+  align-items: flex-end;
   justify-content: space-around;
-  min-height: 0;
-  overflow: hidden;
+  padding-bottom: 24px;
 }
 
-[data-panel='open'] .dials {
-  padding-bottom: 22px;
+.dashboard[hidden] {
+  display: none;
+}
+
+.dashboard > * {
+  animation: ease-in 180ms ease-out both;
+}
+
+@keyframes ease-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+.setting {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
 }
 
 .keys {
   display: flex;
   align-items: flex-end;
-  gap: 18px;
-}
-
-.key-group {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
 .mic {
+  display: flex;
   flex: 1;
+  flex-direction: column;
+  gap: 10px;
   min-width: 0;
 }
 
 .grille {
   width: 100%;
-  height: 58px;
+  height: 56px;
 }
 
 /* ---------- Keys ---------- */
 
 .well {
-  display: inline-grid;
+  display: inline-flex;
+  flex: none;
+  gap: 3px;
   padding: 4px;
   border-radius: 9px;
   background: var(--well);
@@ -226,10 +238,10 @@ p {
 }
 
 /*
-  Push-push keys. --lift is how far the cap stands above the well; the hard side
-  below it is exactly that tall, so its foot never moves.
+  Push keys. --lift is how far the cap stands above the well; the hard side below it
+  is exactly that tall, so its foot never moves.
     out       5px
-    latched   2px  (aria-pressed)
+    latched   2px  (aria-pressed / aria-checked)
     pressed   0px  (finger down)
 */
 .key {
@@ -237,9 +249,10 @@ p {
   --cap: #2c2e32;
   --side: #121315;
   position: relative;
-  width: 64px;
-  height: 58px;
-  padding: 0;
+  display: grid;
+  place-items: center;
+  height: 56px;
+  padding: 0 14px;
   border: 0;
   border-radius: 6px;
   background: var(--cap);
@@ -248,19 +261,19 @@ p {
     0 var(--lift) 0 var(--side);
   transform: translateY(calc(var(--lift) * -1));
   transition:
-    transform 120ms ease-out,
-    box-shadow 120ms ease-out;
+    transform 140ms cubic-bezier(0.25, 1, 0.5, 1),
+    box-shadow 140ms cubic-bezier(0.25, 1, 0.5, 1);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
 
-.key[aria-pressed='true'] {
+.key:is([aria-pressed='true'], [aria-checked='true']) {
   --lift: 2px;
 }
 
 .key.pressed {
   --lift: 0px;
-  transition-duration: 30ms;
+  transition-duration: 40ms;
 }
 
 .key:focus-visible {
@@ -268,66 +281,68 @@ p {
   outline-offset: 6px;
 }
 
+.legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--legend);
+  transition: color 140ms;
+}
+
+.key:is([aria-pressed='true'], [aria-checked='true']) .legend {
+  color: var(--ink);
+}
+
 .key-power {
-  --cap: #e7e2d6;
-  --side: #a39c8c;
-  width: 108px;
+  --cap: #34363b;
+  width: 116px;
 }
 
-/* The pilot light: a small amber window in the power key. */
+.key-controls {
+  width: 100px;
+}
+
+.key-small {
+  width: 56px;
+  height: 44px;
+  padding: 0;
+}
+
+/* Pilot light: red while off, green while on. */
 .pilot {
-  position: absolute;
-  top: 10px;
-  left: 12px;
-  width: 18px;
-  height: 6px;
+  --c: var(--red);
+  width: 12px;
+  height: 5px;
   border-radius: 1.5px;
-  background: #5b4220;
-  box-shadow: inset 0 1px 1px rgb(0 0 0 / 0.35);
+  background: var(--c);
+  box-shadow: 0 0 var(--led-glow) color-mix(in srgb, var(--c) 70%, transparent);
 }
 
-[data-power='on'] .pilot,
-[data-power='starting'] .pilot {
-  background: var(--amber);
-  box-shadow: 0 0 var(--led-glow) rgb(255 170 60 / 0.75);
+:is([data-power='on'], [data-power='starting']) .pilot {
+  --c: var(--green);
 }
 
 [data-power='starting'] .pilot {
   animation: blink 700ms steps(1) infinite;
 }
 
-/* The mic was refused: the key pops up and the pilot flashes three times. */
+/* The mic was refused: the key pops up and the pilot flashes. */
 [data-power='error'] .pilot {
-  animation: flash 500ms steps(1) 3;
+  animation: blink 500ms steps(1) 3;
 }
 
 @keyframes blink {
   50% {
-    background: #5b4220;
+    background: color-mix(in srgb, var(--c) 30%, #000);
     box-shadow: none;
   }
 }
 
-@keyframes flash {
-  0% {
-    background: var(--amber);
-    box-shadow: 0 0 var(--led-glow) rgb(255 170 60 / 0.75);
-  }
-  50% {
-    background: #5b4220;
-    box-shadow: none;
-  }
-}
-
-/* ---------- Dials ---------- */
-
-.dial-group {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding-top: 4px;
-}
+/* ---------- Dial ---------- */
 
 .dial {
   position: relative;
@@ -368,7 +383,6 @@ p {
   font-weight: 600;
   letter-spacing: 0.06em;
   text-anchor: middle;
-  text-transform: uppercase;
 }
 
 /* A flat-topped knob standing on the panel. Only its pointer turns. */
@@ -382,7 +396,6 @@ p {
     inset 0 0 0 1px rgb(255 255 255 / 0.07),
     inset 0 0 0 7px #27292c,
     0 4px 0 #101113;
-  transition: box-shadow 80ms;
 }
 
 .dial.turning .knob {
@@ -409,11 +422,11 @@ p {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .key,
-  .dashboard {
+  .key {
     transition: none;
   }
 
+  .dashboard > *,
   [data-power='starting'] .pilot,
   [data-power='error'] .pilot {
     animation: none;

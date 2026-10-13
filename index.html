@@ -31,39 +31,36 @@
       </div>
 
       <section class="panel">
-        <div class="dashboard" id="dashboard" inert>
-          <div class="dials">
-            <div class="dial-group">
-              <div class="dial" data-dial="brightness" role="slider" tabindex="0" aria-label="Display brightness" aria-valuemin="0" aria-valuemax="100">
-                <svg class="dial-scale" viewBox="-64 -64 128 128" aria-hidden="true"></svg>
-                <span class="knob"><span class="pointer"><span></span></span></span>
-              </div>
-              <span class="label">brightness</span>
+        <div class="dashboard" id="dashboard" hidden>
+          <div class="setting">
+            <div class="dial" data-dial="brightness" role="slider" tabindex="0" aria-label="Brightness" aria-valuemin="0" aria-valuemax="100">
+              <svg class="dial-scale" viewBox="-64 -64 128 128" aria-hidden="true"></svg>
+              <span class="knob"><span class="pointer"><span></span></span></span>
             </div>
-            <div class="dial-group">
-              <div class="dial" data-dial="glow" role="slider" tabindex="0" aria-label="Glow strength" aria-valuemin="0" aria-valuemax="100">
-                <svg class="dial-scale" viewBox="-64 -64 128 128" aria-hidden="true"></svg>
-                <span class="knob"><span class="pointer"><span></span></span></span>
-              </div>
-              <span class="label">glow</span>
-            </div>
+            <span class="label">brightness</span>
+          </div>
+          <div class="setting">
+            <span class="well bank" role="radiogroup" aria-label="Glow">
+              <button class="key key-small" type="button" role="radio" aria-checked="false" data-glow="off"><span class="legend">off</span></button>
+              <button class="key key-small" type="button" role="radio" aria-checked="false" data-glow="low"><span class="legend">low</span></button>
+              <button class="key key-small" type="button" role="radio" aria-checked="false" data-glow="hi"><span class="legend">hi</span></button>
+            </span>
+            <span class="label">glow</span>
           </div>
         </div>
 
         <div class="keys">
-          <div class="key-group">
-            <span class="label">power</span>
-            <span class="well">
-              <button class="key key-power" type="button" aria-label="Power" aria-pressed="false"><i class="pilot"></i></button>
-            </span>
-          </div>
-          <div class="key-group">
-            <span class="label">controls</span>
-            <span class="well">
-              <button class="key key-controls" type="button" aria-label="Controls" aria-pressed="false" aria-controls="dashboard"></button>
-            </span>
-          </div>
-          <div class="key-group mic">
+          <span class="well">
+            <button class="key key-power" type="button" aria-pressed="false">
+              <span class="legend"><i class="pilot"></i>power</span>
+            </button>
+          </span>
+          <span class="well">
+            <button class="key key-controls" type="button" aria-pressed="false" aria-controls="dashboard">
+              <span class="legend">controls</span>
+            </button>
+          </span>
+          <div class="mic">
             <span class="label">mic</span>
             <canvas class="grille" aria-hidden="true"></canvas>
           </div>
