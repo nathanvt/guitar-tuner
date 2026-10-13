@@ -149,7 +149,7 @@ p {
   position: absolute;
   inset: 0 0 auto;
   height: 50%;
-  background: linear-gradient(rgb(46 226 122 / 0.2), rgb(46 226 122 / 0.05) 50%, transparent);
+  background: linear-gradient(rgb(46 226 122 / 0.32), rgb(46 226 122 / 0.05) 50%, transparent);
   opacity: var(--lock, 0);
   pointer-events: none;
 }

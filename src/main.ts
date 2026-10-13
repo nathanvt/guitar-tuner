@@ -15,9 +15,9 @@ const TUNED_ENTER = 3;
 const TUNED_EXIT = 5;
 // How long a note must hold in tune before the display confirms it, and how
 // quickly the confirmation eases in and out.
-const LOCK_AFTER_MS = 400;
+const LOCK_AFTER_MS = 300;
 const LOCK_IN_MS = 180;
-const LOCK_OUT_MS = 150;
+const LOCK_OUT_MS = 500;
 // Easing time constants, in ms: the reading follows pitch at a calm pace, fades in
 // fast and out slowly. Time-based, so 60 Hz and 120 Hz screens move alike.
 const FOLLOW_MS = 100;
@@ -369,9 +369,9 @@ function paint(now: number) {
   });
 }
 
-/** Drives the green gradient at the top of the screen, in twentieths to limit restyling. */
+/** Drives the green gradient at the top of the screen, in fortieths to limit restyling. */
 function showLock(amount: number) {
-  const step = (Math.round(amount * 20) / 20).toFixed(2);
+  const step = (Math.round(amount * 40) / 40).toFixed(3);
   if (step === lockShown) return;
   lockShown = step;
   ui.device.style.setProperty('--lock', step);
