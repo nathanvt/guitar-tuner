@@ -358,7 +358,7 @@ function paint(now: number) {
 
   reading.draw({
     // An error keeps the grey bars up, so the device reads as on but stalled.
-    mode: power === 'on' ? 'live' : power === 'starting' ? 'sweep' : power === 'error' ? 'idle' : 'dark',
+    mode: power === 'on' ? 'live' : power === 'starting' ? 'loading' : power === 'error' ? 'idle' : 'dark',
     time: now,
     note,
     cents,

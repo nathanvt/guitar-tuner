@@ -27,12 +27,18 @@ const COMPOSITION = 2.26;
 const IDLE = [63, 67, 74];
 const RED = [255, 59, 47];
 const GREEN = [46, 226, 122];
-const SWEEP_LIGHT = [210, 212, 208];
+// While the mic starts, waves of light radiate out from the center bar: each bar
+// pulses dark to light, the ends a little after the center.
+const LOADING_DARK = [37, 40, 45];
+const LOADING_LIGHT = [210, 212, 208];
+const RIPPLE_MS = 1300;
+/** How far behind the center the end bars pulse, as a fraction of a ripple. */
+const RIPPLE_LAG = 0.45;
 const WHITE = [244, 243, 238];
 
 export interface Frame {
-  /** dark: off, nothing shown. idle: grey bars only. sweep: starting up. live: listening. */
-  mode: 'dark' | 'idle' | 'sweep' | 'live';
+  /** dark: off, nothing shown. idle: grey bars only. loading: starting up. live: listening. */
+  mode: 'dark' | 'idle' | 'loading' | 'live';
   time: number;
   note: Note | null;
   /** Smoothed distance from pitch. */
@@ -112,17 +118,19 @@ export class Reading {
 
   private gauge(L: Layout, f: Frame) {
     const position = Math.max(-HALF, Math.min(HALF, (f.cents / 50) * HALF));
-    // While starting, a light runs along the arc.
-    const head = ((f.time / 900) % 1) * (2 * HALF + 6) - HALF - 3;
-    const on = f.mode === 'sweep' ? SWEEP_LIGHT : f.tuned ? GREEN : RED;
+    const loading = f.mode === 'loading';
+    const off = loading ? LOADING_DARK : IDLE;
+    const on = loading ? LOADING_LIGHT : f.tuned ? GREEN : RED;
     const boost = f.mode === 'live' && f.tuned ? f.lock * LOCK_GLOW * f.brightness : 0;
 
     for (let i = -HALF; i <= HALF; i++) {
       // `glow` is how much of the lit color a bar takes; `grow` how much longer it gets.
       let glow = 0;
       let grow = 0;
-      if (f.mode === 'sweep') {
-        glow = grow = Math.max(0, 1 - Math.abs(i - head) / 1.5);
+      if (loading) {
+        const phase = f.time / RIPPLE_MS - (Math.abs(i) / HALF) * RIPPLE_LAG;
+        glow = (0.5 - 0.5 * Math.cos(2 * Math.PI * phase)) ** 2;
+        grow = glow * 0.5;
       } else if (f.mode === 'live') {
         const here = Math.max(0, 1 - Math.abs(i - position)) * f.strength;
         grow = f.tuned && i === 0 ? f.strength : here;
@@ -131,7 +139,7 @@ export class Reading {
       const length = L.bar * (i === 0 ? CENTER : 1) * (1 + GROW * grow);
       const width = L.barWidth * (i === 0 ? 1.2 : 1);
       const angle = (i / HALF) * SWEEP;
-      this.bar(this.ctx, L, angle, length, width, rgb(mix(IDLE, on, glow), f.brightness));
+      this.bar(this.ctx, L, angle, length, width, rgb(mix(off, on, glow), f.brightness));
       // Drawn into the glow layer only, so just the halo grows.
       if (boost > 0) this.bar(this.bloom, L, angle, length, width, rgb(GREEN, boost));
     }
