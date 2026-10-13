@@ -219,7 +219,7 @@ p {
 
 /* ---------- Panel ---------- */
 
-/* Power and controls mirror each other either side of the mic. */
+/* A small mic grille on the left; controls, then a wide power key on the right. */
 .panel {
   display: flex;
   flex-direction: column;
@@ -239,11 +239,20 @@ p {
   box-shadow: inset 0 14px 16px -14px rgb(0 0 0 / 0.75);
 }
 
+/* The title sits on its rule, which runs off to its right. */
 .dashboard-title {
-  margin: 0 0 16px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid rgb(255 255 255 / 0.08);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 18px;
   color: var(--print-strong);
+}
+
+.dashboard-title::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgb(255 255 255 / 0.1);
 }
 
 .settings {
@@ -267,15 +276,14 @@ p {
 
 .mic {
   display: flex;
-  flex: 1;
+  flex: none;
   flex-direction: column;
-  align-items: center;
   gap: 10px;
-  min-width: 0;
 }
 
+/* Four holes across; the peak light rises from the bottom. */
 .grille {
-  width: 100%;
+  width: 36px;
   height: 56px;
 }
 
@@ -353,13 +361,18 @@ p {
   color: var(--ink);
 }
 
-.key-power,
 .key-controls {
-  width: 108px;
+  width: 100px;
+}
+
+/* Power takes all the width that's left. */
+.well-power {
+  flex: 1;
 }
 
 .key-power {
   --cap: #34363b;
+  width: 100%;
 }
 
 .key-small {

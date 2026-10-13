@@ -6,7 +6,7 @@ Vite + TypeScript, no framework. Pitch detection is [pitchy](https://github.com/
 
 ## The device
 
-A blocky, old-tech tuner: a grey casing with a dark screen running edge to edge across it. The name sits on the casing above the screen, and the controls below it: power on the left, the mic grille centered, controls on the right. The type is Unbounded (OFL), self-hosted from `@fontsource-variable/unbounded`, Latin subset only.
+A blocky, old-tech tuner: a grey casing with a dark screen running edge to edge across it. The name sits on the casing above the screen, and the controls below it: a small mic grille on the left, then controls, then a wide power key on the right. The type is Unbounded (OFL), self-hosted from `@fontsource-variable/unbounded`, Latin subset only.
 
 - **Gauge** (`src/reading.ts`): an arc of 17 wide LED bars above the note, covering −50¢ to +50¢. The bars rest grey. The bar at the current pitch lights red and grows longer; between two bars the light splits across both, so the reading glides. Within 3¢, the whole arc lights green. Nothing is drawn while the tuner is off.
 - **Note:** a white pixel letter, centered under the center bar. It never moves; the sharp and octave hang off its right side. No words appear while listening.
@@ -17,7 +17,7 @@ A blocky, old-tech tuner: a grey casing with a dark screen running edge to edge 
 
   Settings are saved in the browser. With the tuner off, the reading shows a preview while the dashboard is open.
 - Keys stay down until their action has run, then move straight to their new position, so a key never bounces between states.
-- **Mic grille** (`src/grille.ts`): sits over the phone's own microphone. Its holes light up from the left with input level.
+- **Mic grille** (`src/grille.ts`): sits over the phone's own microphone. Four holes across; they light from the bottom up with input level, like a peak meter.
 - Errors (mic blocked, busy, missing, no https) show where the note goes, with a pixel warning triangle and an orange title. The power key pops back up and its pilot flashes orange.
 - The page background is casing grey, so whatever Safari shows around the page matches the casing.
 

@@ -1,5 +1,5 @@
 // The mic grille: drilled holes over the phone's microphone. Light shines through
-// them from the left in proportion to the input level, like a VU meter.
+// them from the bottom up in proportion to the input level, like a peak meter.
 
 const PITCH = 9;
 const HOLE = 1.7;
@@ -36,10 +36,10 @@ export class Grille {
     this.redraw();
   }
 
-  /** `level` is 0..1. Redraws only when a whole column changes. */
+  /** `level` is 0..1. Redraws only when a whole row changes. */
   draw(level: number) {
     this.level = level;
-    const lit = Math.round(level * this.cols);
+    const lit = Math.round(level * this.rows);
     if (lit === this.shown) return;
     this.shown = lit;
 
@@ -53,10 +53,11 @@ export class Grille {
       for (let r = 0; r < this.rows; r++) {
         const x = left + c * PITCH;
         const y = top + r * PITCH;
-        if (c < lit) {
+        const height = this.rows - 1 - r; // 0 is the bottom row
+        if (height < lit) {
           ctx.shadowColor = 'rgb(244 241 232 / 0.8)';
           ctx.shadowBlur = this.glow;
-          this.hole(x, y, `rgb(244 241 232 / ${(0.5 + (0.4 * c) / this.cols).toFixed(3)})`);
+          this.hole(x, y, `rgb(244 241 232 / ${(0.5 + (0.4 * height) / this.rows).toFixed(3)})`);
           ctx.shadowBlur = 0;
         } else {
           // A dark bore with a faint lit lower lip.
