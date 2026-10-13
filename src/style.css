@@ -1,6 +1,7 @@
 /*
-  A blocky, old-tech tuner: flat color blocks edge to edge, the reading lit on open
-  space above a control panel of hard-edged keys and a dial. Red and green carry the
+  A blocky, old-tech tuner: a grey casing with a dark screen running edge to edge
+  across it, the reading lit on the screen, and a control panel of hard-edged keys
+  and a dial below. Red and green carry the
   tuning and the power state; everything else is grey and white.
 */
 
@@ -47,13 +48,9 @@ body {
   overscroll-behavior: none;
 }
 
-/*
-  Dark above the middle, panel grey below it. In Safari the page ends above the
-  floating toolbar, and whatever shows beneath it should match the panel, not the
-  reading area.
-*/
+/* Casing grey, so anything Safari shows around the page matches the casing. */
 html {
-  background: var(--panel) linear-gradient(var(--space), var(--space)) no-repeat top / 100% 50%;
+  background: var(--panel);
 }
 
 body {
@@ -79,15 +76,16 @@ p {
   width: 100vw;
   height: 100dvh;
   overflow: hidden;
-  background: var(--space);
+  background: var(--panel);
   color: var(--ink);
 }
 
+/* The casing above the screen carries the name. */
 .brand {
   display: flex;
   align-items: baseline;
   gap: 12px;
-  padding: max(20px, env(safe-area-inset-top)) max(22px, env(safe-area-inset-right)) 0
+  padding: max(20px, env(safe-area-inset-top)) max(22px, env(safe-area-inset-right)) 18px
     max(22px, env(safe-area-inset-left));
 }
 
@@ -109,10 +107,12 @@ p {
 
 /* ---------- Reading ---------- */
 
+/* The screen: dark, edge to edge across the casing. */
 .reading {
   position: relative;
   flex: 1 1 auto;
   min-height: 220px;
+  background: var(--space);
 }
 
 .device:is([data-power='off'], [data-power='error']) .reading {
@@ -190,12 +190,12 @@ p {
 
 /* ---------- Panel ---------- */
 
+/* Power and controls mirror each other either side of the mic. */
 .panel {
   display: flex;
   flex-direction: column;
   padding: 22px max(22px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom))
     max(22px, env(safe-area-inset-left));
-  background: var(--panel);
 }
 
 /*
@@ -241,6 +241,7 @@ p {
   display: flex;
   flex: 1;
   flex-direction: column;
+  align-items: center;
   gap: 10px;
   min-width: 0;
 }
@@ -324,13 +325,13 @@ p {
   color: var(--ink);
 }
 
-.key-power {
-  --cap: #34363b;
-  width: 116px;
+.key-power,
+.key-controls {
+  width: 108px;
 }
 
-.key-controls {
-  width: 100px;
+.key-power {
+  --cap: #34363b;
 }
 
 .key-small {
