@@ -12,7 +12,7 @@ A blocky, old-tech tuner: a grey casing with a dark screen running edge to edge 
 - **Note:** a white pixel letter, centered under the center bar. It never moves; the sharp and octave hang off its right side. No words appear while listening.
 - **Power:** a push-push key with a pilot light: an unlit dark green while off, lit green (with glow) while on. A tap on the reading area also turns the tuner on, and leaving the app turns it off.
 - **Controls:** a second push-push key. The screen lifts like a lid to uncover a slate-grey controls tray anchored beneath it; the reading glides up (and shrinks only if it must) to stay centered in what's left. The lift is all clip and transform, so the reading isn't redrawn mid-animation. In the tray:
-  - **Brightness** dial (0–10), in `src/dial.ts`. Turn it by dragging up or right, or with the arrow keys.
+  - **Brightness** dial, in `src/dial.ts`: detents from −5 to +5, with 0 straight up as the default. −5 dims the reading to 20%, +5 is full. Turn it by dragging up or right, or with the arrow keys.
   - **Glow:** three interlocking keys, off / low / hi, for the light around the reading, the pilot light and the mic grille. Touching one latches it and releases the others. A small green light beside the label shows the current strength.
 
   Settings are saved in the browser. With the tuner off, the reading shows a preview while the dashboard is open.

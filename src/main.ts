@@ -13,18 +13,21 @@ const HOLD_MS = 1500;
 // In-tune band with hysteresis so the green doesn't flicker at the edge.
 const TUNED_ENTER = 3;
 const TUNED_EXIT = 5;
-// Per-frame easing: the reading follows pitch quickly, fades in fast and out slowly.
-const FOLLOW = 0.3;
-const FADE_IN = 0.35;
-const FADE_OUT = 0.08;
+// Easing time constants, in ms: the reading follows pitch at a calm pace, fades in
+// fast and out slowly. Time-based, so 60 Hz and 120 Hz screens move alike.
+const FOLLOW_MS = 100;
+const FADE_IN_MS = 40;
+const FADE_OUT_MS = 200;
 
 const GLOW: Record<Glow, { bloom: number; blur: number; led: number }> = {
   off: { bloom: 0, blur: 0, led: 0 },
   low: { bloom: 0.3, blur: 5, led: 6 },
   hi: { bloom: 0.55, blur: 8, led: 11 },
 };
-// The brightness dial never goes fully dark.
-const MIN_BRIGHTNESS = 0.2;
+// Brightness dial: 0 (straight up) is the default; −5 dims to 20%, +5 is full.
+const BRIGHTNESS_STEPS = 5;
+const BRIGHTNESS_HOME = 0.75;
+const BRIGHTNESS_MIN = 0.2;
 const SETTINGS_KEY = 'tuner.settings';
 // Shown while adjusting the controls with the tuner off, so the effect is visible.
 const PREVIEW_NOTE = noteFromFrequency(440);
@@ -66,13 +69,19 @@ let heardAt = -Infinity;
 let tuned = false;
 let cents = 0;
 let strength = 0;
+let paintedAt = performance.now();
 
+const levelOf = (value: number) => Math.round(value * 2 * BRIGHTNESS_STEPS) - BRIGHTNESS_STEPS;
 new Dial(el('[data-dial="brightness"]'), {
-  scale: ['0', '', '2', '', '4', '', '6', '', '8', '', '10'],
-  value: settings.brightness,
-  describe: (value) => `${Math.round(value * 10)} of 10`,
+  scale: ['−5', '−4', '−3', '−2', '−1', '0', '+1', '+2', '+3', '+4', '+5'],
+  steps: 2 * BRIGHTNESS_STEPS,
+  value: (settings.brightness + BRIGHTNESS_STEPS) / (2 * BRIGHTNESS_STEPS),
+  describe: (value) => {
+    const level = levelOf(value);
+    return level > 0 ? `+${level}` : String(level);
+  },
   onChange: (value) => {
-    settings.brightness = value;
+    settings.brightness = levelOf(value);
     saveSettings();
     paint(performance.now());
   },
@@ -297,7 +306,12 @@ function loop(now: number) {
 }
 
 function paint(now: number) {
-  const brightness = MIN_BRIGHTNESS + (1 - MIN_BRIGHTNESS) * settings.brightness;
+  const elapsed = Math.min(100, Math.max(0, now - paintedAt));
+  paintedAt = now;
+  const ease = (ms: number) => 1 - Math.exp(-elapsed / ms);
+
+  const level = settings.brightness / BRIGHTNESS_STEPS; // -1..1
+  const brightness = BRIGHTNESS_HOME + level * (level < 0 ? BRIGHTNESS_HOME - BRIGHTNESS_MIN : 1 - BRIGHTNESS_HOME);
   const preview = panelOpen && (power === 'off' || power === 'error');
   ui.device.dataset.preview = String(preview);
   if (preview) {
@@ -311,14 +325,14 @@ function paint(now: number) {
 
   if ((live || held) && note) {
     // Jump straight to the first reading; glide after that.
-    cents = strength < 0.02 ? note.cents : cents + (note.cents - cents) * FOLLOW;
+    cents = strength < 0.02 ? note.cents : cents + (note.cents - cents) * ease(FOLLOW_MS);
     const off = Math.abs(note.cents);
     tuned = tuned ? off < TUNED_EXIT : off < TUNED_ENTER;
   } else {
     tuned = false;
   }
   const target = live ? 1 : held ? 0.5 : 0;
-  strength += (target - strength) * (target > strength ? FADE_IN : FADE_OUT);
+  strength += (target - strength) * ease(target > strength ? FADE_IN_MS : FADE_OUT_MS);
   if (strength < 0.005) strength = 0;
 
   reading.draw({
@@ -333,12 +347,15 @@ function paint(now: number) {
   });
 }
 
+/** `brightness` is a dial step, -5..+5. */
 function loadSettings(): { brightness: number; glow: Glow } {
-  const defaults = { brightness: 0.8, glow: 'low' as Glow };
+  const defaults = { brightness: 0, glow: 'low' as Glow };
   try {
     const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? '{}');
+    const steps = saved.brightness;
     return {
-      brightness: typeof saved.brightness === 'number' ? Math.min(1, Math.max(0, saved.brightness)) : defaults.brightness,
+      // Older versions saved brightness as a 0..1 fraction; those fall back to the default.
+      brightness: Number.isInteger(steps) && Math.abs(steps) <= BRIGHTNESS_STEPS ? steps : defaults.brightness,
       glow: saved.glow in GLOW ? saved.glow : defaults.glow,
     };
   } catch {

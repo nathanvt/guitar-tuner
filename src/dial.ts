@@ -1,5 +1,6 @@
 // A rotary dial: printed scale, fixed knob, rotating pointer. Turn it by dragging up or
-// right (down or left turns it back), or with the arrow keys.
+// right (down or left turns it back), or with the arrow keys. With `steps`, it clicks
+// between detents.
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 /** The pointer sweeps 270°, from 7:30 to 4:30. */
@@ -10,8 +11,10 @@ const TRAVEL = 220;
 const TICKS = 20;
 
 export interface DialOptions {
-  /** Numbers printed evenly around the scale; empty strings leave a gap. */
+  /** Numbers printed evenly around the scale; empty strings leave a gap. '0' is printed bold. */
   scale: string[];
+  /** Detents between the ends; omit for a smooth dial. */
+  steps?: number;
   /** 0..1 */
   value: number;
   describe: (value: number) => string;
@@ -35,7 +38,9 @@ export class Dial {
   }
 
   private set(next: number) {
-    const value = Math.min(1, Math.max(0, next));
+    const { steps } = this.options;
+    const clamped = Math.min(1, Math.max(0, next));
+    const value = steps ? Math.round(clamped * steps) / steps : clamped;
     if (value === this.value) return;
     this.value = value;
     this.show();
@@ -68,11 +73,12 @@ export class Dial {
     this.root.addEventListener('pointercancel', end);
 
     this.root.addEventListener('keydown', (event) => {
+      const step = this.options.steps ? 1 / this.options.steps : 0.05;
       const moves: Record<string, number> = {
-        ArrowUp: this.value + 0.05,
-        ArrowRight: this.value + 0.05,
-        ArrowDown: this.value - 0.05,
-        ArrowLeft: this.value - 0.05,
+        ArrowUp: this.value + step,
+        ArrowRight: this.value + step,
+        ArrowDown: this.value - step,
+        ArrowLeft: this.value - step,
         Home: 0,
         End: 1,
       };
@@ -84,9 +90,10 @@ export class Dial {
 
   /** Ticks and numbers around the knob, like a printed panel. */
   private printScale(svg: SVGSVGElement) {
-    for (let i = 0; i <= TICKS; i++) {
-      const angle = ((START + (i / TICKS) * RANGE) * Math.PI) / 180;
-      const major = i % 2 === 0;
+    const ticks = this.options.steps ?? TICKS;
+    for (let i = 0; i <= ticks; i++) {
+      const angle = ((START + (i / ticks) * RANGE) * Math.PI) / 180;
+      const major = this.options.steps !== undefined || i % 2 === 0;
       const outer = 46;
       const inner = major ? 40 : 43;
       const line = document.createElementNS(SVG_NS, 'line');
@@ -105,6 +112,7 @@ export class Dial {
       text.setAttribute('x', (55 * Math.sin(angle)).toFixed(2));
       text.setAttribute('y', (-55 * Math.cos(angle) + 2.5).toFixed(2));
       text.textContent = label;
+      if (label === '0') text.setAttribute('class', 'home');
       svg.append(text);
     });
   }

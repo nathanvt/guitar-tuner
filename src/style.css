@@ -474,10 +474,17 @@ p {
 .dial-scale text {
   fill: var(--print);
   font-family: inherit;
-  font-size: 7.5px;
+  font-size: 7px;
   font-weight: 600;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.02em;
   text-anchor: middle;
+}
+
+/* 0, straight up: the default. */
+.dial-scale text.home {
+  fill: var(--ink);
+  font-size: 8.5px;
+  font-weight: 800;
 }
 
 /* A flat-topped knob standing on the panel. Only its pointer turns. */
