@@ -1,8 +1,23 @@
 # Guitar Tuner
 
-A chromatic guitar tuner PWA. It listens through the phone's microphone, shows the note and how far off it is, and highlights the nearest open string. Everything runs on the phone, and audio never leaves the device. Once installed it works offline.
+A chromatic guitar tuner PWA. It listens through the phone's microphone, shows the note and whether it's flat, sharp or in tune. Everything runs on the phone, and audio never leaves the device. Once installed it works offline.
 
 Vite + TypeScript, no framework. Pitch detection is [pitchy](https://github.com/ianprime0509/pitchy) (McLeod pitch method). `vite-plugin-pwa` handles the manifest and service worker.
+
+## The device
+
+A blocky, old-tech tuner: flat color blocks edge to edge. The reading lights up on open space above a control panel. The type is Unbounded (OFL), self-hosted from `@fontsource-variable/unbounded`, Latin subset only.
+
+- **Gauge** (`src/reading.ts`): an arc of 25 LED bars above the note, covering −50¢ to +50¢. The bars rest grey. The bar at the current pitch lights red, or green when you're within 3¢, and grows longer. Between two bars the light splits across both, so the reading glides. Nothing is drawn while the tuner is off.
+- **Note:** a white pixel letter, centered under the center bar. It never moves; the sharp and octave hang off its right side. No words appear while listening.
+- **Power:** a push-push key with an amber pilot light. A tap on the reading area also turns the tuner on, and leaving the app turns it off.
+- **Controls:** a second push-push key that folds open a dashboard with two dials (`src/dial.ts`):
+  - **Brightness** (0–10) for the reading.
+  - **Glow** (off, 1–4) for the light around the reading, the pilot light and the mic grille.
+
+  Turn a dial by dragging up or right, or with the arrow keys. A tap on the glow dial steps it. Settings are saved in the browser. With the tuner off, the reading shows a preview while the dashboard is open.
+- **Mic grille** (`src/grille.ts`): sits over the phone's own microphone. Its holes light up from the left with input level.
+- Errors (mic blocked, busy, missing, no https) show as small text where the note goes. The power key pops back up and its pilot flashes.
 
 ## Run
 

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Tuner</title>
     <meta name="description" content="A chromatic guitar tuner that listens through the microphone." />
-    <meta name="theme-color" content="#0b0c0e" />
+    <meta name="theme-color" content="#0e0f11" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -15,33 +15,60 @@
     <script type="module" src="/src/main.ts"></script>
   </head>
   <body>
-    <main class="tuner" data-state="idle" data-signal="none">
-      <header class="meta">
-        <span class="label">Tuner</span>
-        <span class="label dim">A4 440 Hz</span>
+    <main class="device" data-power="off" data-panel="closed">
+      <header class="brand">
+        <span class="wordmark">tuner</span>
+        <span class="label">tn-6 chromatic</span>
       </header>
 
-      <section class="readout">
-        <svg class="gauge" viewBox="0 0 320 172" aria-hidden="true">
-          <g class="ticks"></g>
-          <text class="flat" x="34" y="92">♭</text>
-          <text class="sharp" x="286" y="92">♯</text>
-          <g class="needle">
-            <line x1="160" y1="160" x2="160" y2="36" />
-            <circle cx="160" cy="160" r="7" />
-          </g>
-        </svg>
-        <p class="note"><span class="letter">–</span><span class="accidental"></span><span class="octave"></span></p>
-        <p class="cents">Play a string</p>
+      <div class="reading" aria-label="Turn the tuner on">
+        <canvas class="bloom" aria-hidden="true"></canvas>
+        <canvas class="lights" aria-hidden="true"></canvas>
+        <div class="message">
+          <p class="message-title"></p>
+          <p class="message-detail"></p>
+        </div>
+      </div>
+
+      <section class="panel">
+        <div class="dashboard" id="dashboard" inert>
+          <div class="dials">
+            <div class="dial-group">
+              <div class="dial" data-dial="brightness" role="slider" tabindex="0" aria-label="Display brightness" aria-valuemin="0" aria-valuemax="100">
+                <svg class="dial-scale" viewBox="-64 -64 128 128" aria-hidden="true"></svg>
+                <span class="knob"><span class="pointer"><span></span></span></span>
+              </div>
+              <span class="label">brightness</span>
+            </div>
+            <div class="dial-group">
+              <div class="dial" data-dial="glow" role="slider" tabindex="0" aria-label="Glow strength" aria-valuemin="0" aria-valuemax="100">
+                <svg class="dial-scale" viewBox="-64 -64 128 128" aria-hidden="true"></svg>
+                <span class="knob"><span class="pointer"><span></span></span></span>
+              </div>
+              <span class="label">glow</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="keys">
+          <div class="key-group">
+            <span class="label">power</span>
+            <span class="well">
+              <button class="key key-power" type="button" aria-label="Power" aria-pressed="false"><i class="pilot"></i></button>
+            </span>
+          </div>
+          <div class="key-group">
+            <span class="label">controls</span>
+            <span class="well">
+              <button class="key key-controls" type="button" aria-label="Controls" aria-pressed="false" aria-controls="dashboard"></button>
+            </span>
+          </div>
+          <div class="key-group mic">
+            <span class="label">mic</span>
+            <canvas class="grille" aria-hidden="true"></canvas>
+          </div>
+        </div>
       </section>
-
-      <ol class="strings" aria-label="Standard tuning"></ol>
-
-      <button class="start" type="button">
-        <span class="pill">Tap to tune</span>
-        <span class="hint">Uses the microphone. Sound stays on this phone.</span>
-        <span class="error" hidden></span>
-      </button>
     </main>
   </body>
 </html>

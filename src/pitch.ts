@@ -3,7 +3,7 @@ import { PitchDetector } from 'pitchy';
 /** Samples per analysis window. ~85 ms at 48 kHz: seven periods of low E. */
 export const WINDOW = 4096;
 
-const A4_HZ = 440;
+export const A4_DEFAULT = 440;
 const NAMES = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];
 
 // Guitar range with headroom: drop-tuned low strings up to the high frets.
@@ -26,8 +26,9 @@ export interface Note {
   hz: number;
 }
 
-export function noteFromFrequency(hz: number): Note {
-  const exact = 69 + 12 * Math.log2(hz / A4_HZ);
+/** Names the nearest equal-tempered note, with `a4` as the reference pitch. */
+export function noteFromFrequency(hz: number, a4 = A4_DEFAULT): Note {
+  const exact = 69 + 12 * Math.log2(hz / a4);
   const midi = Math.round(exact);
   return {
     name: NAMES[((midi % 12) + 12) % 12],
@@ -36,31 +37,6 @@ export function noteFromFrequency(hz: number): Note {
     cents: (exact - midi) * 100,
     hz,
   };
-}
-
-/** Standard tuning, low to high, as MIDI note numbers. */
-export const STANDARD_TUNING = [
-  { label: 'E', midi: 40 },
-  { label: 'A', midi: 45 },
-  { label: 'D', midi: 50 },
-  { label: 'G', midi: 55 },
-  { label: 'B', midi: 59 },
-  { label: 'e', midi: 64 },
-];
-
-/** Index of the open string closest to a note, or -1 when it's nowhere near one. */
-export function nearestString(note: Note): number {
-  const exact = note.midi + note.cents / 100;
-  let best = -1;
-  let bestDistance = 2.5;
-  STANDARD_TUNING.forEach((string, i) => {
-    const distance = Math.abs(exact - string.midi);
-    if (distance < bestDistance) {
-      best = i;
-      bestDistance = distance;
-    }
-  });
-  return best;
 }
 
 /** Turns raw microphone windows into a steady fundamental frequency. */

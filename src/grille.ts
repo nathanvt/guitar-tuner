@@ -1,0 +1,81 @@
+// The mic grille: drilled holes over the phone's microphone. Light shines through
+// them from the left in proportion to the input level, like a VU meter.
+
+const PITCH = 9;
+const HOLE = 1.7;
+
+export class Grille {
+  private readonly ctx: CanvasRenderingContext2D;
+  private width = 0;
+  private height = 0;
+  private ratio = 1;
+  private cols = 0;
+  private rows = 0;
+  private shown = -1;
+  private level = 0;
+  private glow = 6;
+
+  constructor(canvas: HTMLCanvasElement) {
+    this.ctx = canvas.getContext('2d')!;
+  }
+
+  resize(width: number, height: number) {
+    this.width = width;
+    this.height = height;
+    this.ratio = window.devicePixelRatio || 1;
+    this.ctx.canvas.width = Math.round(width * this.ratio);
+    this.ctx.canvas.height = Math.round(height * this.ratio);
+    this.cols = Math.floor(width / PITCH);
+    this.rows = Math.floor(height / PITCH);
+    this.redraw();
+  }
+
+  /** Blur, in pixels, of the light around lit holes. */
+  setGlow(pixels: number) {
+    this.glow = pixels;
+    this.redraw();
+  }
+
+  /** `level` is 0..1. Redraws only when a whole column changes. */
+  draw(level: number) {
+    this.level = level;
+    const lit = Math.round(level * this.cols);
+    if (lit === this.shown) return;
+    this.shown = lit;
+
+    const { ctx } = this;
+    ctx.setTransform(this.ratio, 0, 0, this.ratio, 0, 0);
+    ctx.clearRect(0, 0, this.width, this.height);
+    const left = (this.width - (this.cols - 1) * PITCH) / 2;
+    const top = (this.height - (this.rows - 1) * PITCH) / 2;
+
+    for (let c = 0; c < this.cols; c++) {
+      for (let r = 0; r < this.rows; r++) {
+        const x = left + c * PITCH;
+        const y = top + r * PITCH;
+        if (c < lit) {
+          ctx.shadowColor = 'rgb(244 241 232 / 0.8)';
+          ctx.shadowBlur = this.glow;
+          this.hole(x, y, `rgb(244 241 232 / ${(0.5 + (0.4 * c) / this.cols).toFixed(3)})`);
+          ctx.shadowBlur = 0;
+        } else {
+          // A dark bore with a faint lit lower lip.
+          this.hole(x, y + 0.6, 'rgb(255 255 255 / 0.07)');
+          this.hole(x, y, '#060708');
+        }
+      }
+    }
+  }
+
+  private redraw() {
+    this.shown = -1;
+    this.draw(this.level);
+  }
+
+  private hole(x: number, y: number, color: string) {
+    this.ctx.beginPath();
+    this.ctx.arc(x, y, HOLE, 0, Math.PI * 2);
+    this.ctx.fillStyle = color;
+    this.ctx.fill();
+  }
+}

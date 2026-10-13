@@ -1,8 +1,17 @@
 // Feeds synthetic plucked strings through the real tracker and checks the readings.
 // Run: npm run check:pitch
-import { PitchTracker, WINDOW, noteFromFrequency, nearestString, STANDARD_TUNING } from '../src/pitch.ts';
+import { PitchTracker, WINDOW, noteFromFrequency } from '../src/pitch.ts';
 
 const SAMPLE_RATE = 48000;
+// Standard tuning, low to high, as MIDI note numbers.
+const OPEN_STRINGS = [
+  { label: 'E', midi: 40 },
+  { label: 'A', midi: 45 },
+  { label: 'D', midi: 50 },
+  { label: 'G', midi: 55 },
+  { label: 'B', midi: 59 },
+  { label: 'e', midi: 64 },
+];
 const FRAMES = 40; // ~two-thirds of a second at 60 fps
 const HOP = Math.round(SAMPLE_RATE / 60);
 
@@ -46,17 +55,16 @@ const check = (ok, label) => {
 };
 
 // Every open string, in tune and detuned both ways.
-for (const string of STANDARD_TUNING) {
+for (const string of OPEN_STRINGS) {
   for (const cents of [0, +7, -13, +31, -42]) {
     const readings = track(pluck(hzFor(string.midi, cents), 1)).slice(4); // skip warm-up
-    const notes = readings.filter((r) => r !== null).map(noteFromFrequency);
+    const notes = readings.filter((r) => r !== null).map((hz) => noteFromFrequency(hz));
     const wrongNote = notes.filter((n) => n.midi !== string.midi).length;
     const worst = Math.max(...notes.map((n) => Math.abs(n.cents - cents)));
-    const lit = notes.length ? STANDARD_TUNING[nearestString(notes.at(-1))]?.label : '-';
     check(
-      notes.length === readings.length && wrongNote === 0 && worst < 1.5 && lit === string.label,
+      notes.length === readings.length && wrongNote === 0 && worst < 1.5,
       `${string.label} (midi ${string.midi}) ${cents >= 0 ? '+' : ''}${cents}¢ → ` +
-        `${notes.length}/${readings.length} read, ${wrongNote} wrong note, worst error ${worst.toFixed(2)}¢, lit ${lit}`,
+        `${notes.length}/${readings.length} read, ${wrongNote} wrong note, worst error ${worst.toFixed(2)}¢`,
     );
   }
 }
@@ -77,6 +85,14 @@ check(named(440) === 'A4 +0.0', `440 Hz → ${named(440)}`);
 check(named(82.4069) === 'E2 +0.0', `82.41 Hz → ${named(82.4069)}`);
 check(named(466.1638) === 'A♯4 +0.0', `466.16 Hz → ${named(466.1638)}`);
 check(named(261.6256) === 'C4 +0.0', `261.63 Hz → ${named(261.6256)}`);
+
+// A4 reference: the same pitch reads differently against a different reference.
+const against = (hz, a4) => {
+  const n = noteFromFrequency(hz, a4);
+  return `${n.name}${n.octave} ${n.cents >= 0 ? '+' : ''}${n.cents.toFixed(1)}`;
+};
+check(against(442, 442) === 'A4 +0.0', `442 Hz with A4 = 442 → ${against(442, 442)}`);
+check(against(440, 442) === 'A4 -7.9', `440 Hz with A4 = 442 → ${against(440, 442)}`);
 
 console.log(failures ? `\n${failures} failed` : '\nall passed');
 process.exit(failures ? 1 : 0);

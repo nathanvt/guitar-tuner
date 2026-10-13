@@ -1,15 +1,33 @@
+/*
+  A blocky, old-tech tuner: flat color blocks edge to edge, the reading lit on open
+  space above a control panel of hard-edged keys and dials. Red and green carry the
+  tuning; everything else is grey, cream and white.
+*/
+
+/* Unbounded (OFL), Latin only: the other subsets would add 160 KB this tuner never shows. */
+@font-face {
+  font-family: 'Unbounded Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 200 900;
+  src: url('../node_modules/@fontsource-variable/unbounded/files/unbounded-latin-wght-normal.woff2')
+    format('woff2-variations');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
 :root {
   color-scheme: dark;
-  --bg: #0b0c0e;
-  --ink: #f2f3f5;
-  --muted: #8b919a;
-  --tick: #3d424a;
-  --tick-major: #5f6570;
-  --good: #5ee08f;
-  --good-glow: rgb(94 224 143 / 0.45);
-  --glass: rgb(255 255 255 / 0.05);
-  --glass-edge: rgb(255 255 255 / 0.1);
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+
+  --space: #0e0f11;
+  --panel: #1b1c1f;
+  --well: #111214;
+  --ink: #f2f1ec;
+  --print: #868b93;
+  --print-strong: #b9bdc3;
+  --amber: #ffb84a;
+
+  font-family: 'Unbounded Variable', -apple-system, BlinkMacSystemFont, sans-serif;
   -webkit-text-size-adjust: 100%;
 }
 
@@ -19,253 +37,385 @@
 
 html,
 body {
-  margin: 0;
   height: 100%;
+  margin: 0;
   overflow: hidden;
   overscroll-behavior: none;
+  background: var(--space);
 }
 
 body {
-  background: radial-gradient(120% 70% at 50% 0%, #171a1f 0%, var(--bg) 65%) var(--bg);
-  color: var(--ink);
   -webkit-user-select: none;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
 }
 
-.tuner {
-  position: relative;
-  display: grid;
-  grid-template-rows: auto 1fr auto;
-  height: 100dvh;
-  max-width: 520px;
-  margin: 0 auto;
-  padding: max(16px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right))
-    max(24px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
-}
-
-/* Supporting UI: small, left-aligned, out of the way. */
-.meta {
-  display: flex;
-  gap: 14px;
-  padding-top: 8px;
-}
-
-.label {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-
-.label.dim {
-  opacity: 0.6;
-}
-
-/* Readout: gauge, note, cents. */
-.readout {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-}
-
-.gauge {
-  width: 100%;
-  max-width: 420px;
-  overflow: visible;
-}
-
-.ticks line {
-  stroke: var(--tick);
-  stroke-width: 2;
-  stroke-linecap: round;
-  transition: stroke 150ms;
-}
-
-.ticks .major {
-  stroke: var(--tick-major);
-  stroke-width: 2.5;
-}
-
-.ticks .center {
-  stroke: var(--ink);
-  stroke-width: 3;
-}
-
-.gauge text {
-  fill: var(--muted);
-  font-size: 18px;
-  text-anchor: middle;
-}
-
-.needle line {
-  stroke: var(--ink);
-  stroke-width: 3;
-  stroke-linecap: round;
-}
-
-.needle circle {
-  fill: var(--ink);
-}
-
-.needle line,
-.needle circle {
-  transition: stroke 150ms, fill 150ms;
-}
-
-.needle {
-  transition: opacity 250ms;
-}
-
-.note {
-  display: flex;
-  align-items: flex-start;
-  margin: 8px 0 0;
-  font-size: clamp(96px, 30vw, 150px);
-  font-weight: 600;
-  line-height: 1;
-  letter-spacing: -0.02em;
-  transition: color 150ms, opacity 250ms, text-shadow 150ms;
-}
-
-.accidental {
-  font-size: 0.42em;
-  margin-top: 0.12em;
-}
-
-.octave {
-  align-self: flex-end;
-  margin: 0 0 0.08em 0.04em;
-  font-size: 0.28em;
-  font-weight: 500;
-  color: var(--muted);
-}
-
-.cents {
-  min-height: 1.4em;
-  margin: 6px 0 0;
-  font-size: 17px;
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
-  transition: color 150ms;
-}
-
-/* Signal states. */
-[data-signal='none'] .needle {
-  opacity: 0.25;
-}
-
-[data-signal='none'] .note {
-  color: var(--muted);
-  opacity: 0.4;
-}
-
-[data-signal='held'] .note {
-  opacity: 0.55;
-}
-
-[data-tuned='true'] .note,
-[data-tuned='true'] .cents {
-  color: var(--good);
-}
-
-[data-tuned='true'] .note {
-  text-shadow: 0 0 36px var(--good-glow);
-}
-
-[data-tuned='true'] .needle line,
-[data-tuned='true'] .ticks .center {
-  stroke: var(--good);
-}
-
-[data-tuned='true'] .needle circle {
-  fill: var(--good);
-}
-
-/* Open strings, low to high. */
-.strings {
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 8px;
+p {
   margin: 0;
-  padding: 0;
-  list-style: none;
 }
 
-.strings li {
-  padding: 12px 0;
-  border: 1px solid var(--glass-edge);
-  border-radius: 14px;
-  background: var(--glass);
-  color: var(--muted);
-  font-size: 17px;
-  font-weight: 600;
-  text-align: center;
-  transition: background 150ms, color 150ms, border-color 150ms;
-}
+/* ---------- Layout ---------- */
 
-.strings li.active {
-  background: rgb(255 255 255 / 0.12);
-  border-color: rgb(255 255 255 / 0.22);
-  color: var(--ink);
-}
+.device {
+  --bloom: 0.35;
+  --bloom-blur: 6px;
+  --led-glow: 7px;
 
-[data-tuned='true'] .strings li.active {
-  background: rgb(94 224 143 / 0.16);
-  border-color: rgb(94 224 143 / 0.45);
-  color: var(--good);
-}
-
-/* Start overlay: the whole screen is the tap target. */
-.start {
-  position: absolute;
-  inset: 0;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 14px;
-  padding: 24px;
-  border: 0;
-  background: rgb(11 12 14 / 0.55);
-  -webkit-backdrop-filter: blur(14px);
-  backdrop-filter: blur(14px);
+  width: 100vw;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--space);
   color: var(--ink);
-  font: inherit;
+}
+
+.brand {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: max(20px, env(safe-area-inset-top)) max(22px, env(safe-area-inset-right)) 0
+    max(22px, env(safe-area-inset-left));
+}
+
+.wordmark {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+}
+
+/* Printed legends. */
+.label {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--print);
+  white-space: nowrap;
+}
+
+/* ---------- Reading ---------- */
+
+.reading {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 220px;
+}
+
+.device:is([data-power='off'], [data-power='error']) .reading {
   cursor: pointer;
 }
 
-[data-state='listening'] .start {
-  display: none;
+.reading canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
 }
 
-.pill {
-  padding: 16px 30px;
-  border-radius: 999px;
-  background: var(--ink);
-  color: var(--bg);
-  font-size: 17px;
-  font-weight: 600;
-  transition: transform 120ms;
+/* A blurred copy of the lights underneath them; its strength comes from the glow dial. */
+.reading .bloom {
+  filter: blur(var(--bloom-blur));
+  opacity: var(--bloom);
 }
 
-.start:active .pill {
-  transform: scale(0.97);
-}
-
-.hint {
-  font-size: 13px;
-  color: var(--muted);
-}
-
-.error {
-  max-width: 300px;
-  font-size: 14px;
-  line-height: 1.4;
-  color: #f5c06b;
+.message {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 0 32px;
   text-align: center;
+  transform: translateY(-50%);
+  pointer-events: none;
+  transition: opacity 200ms;
+}
+
+[data-power='on'] .message,
+[data-preview='true'] .message {
+  opacity: 0;
+}
+
+.message-title {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+[data-power='off'] .message-title {
+  color: var(--print);
+}
+
+.message-detail {
+  max-width: 28ch;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--print);
+}
+
+/* ---------- Panel ---------- */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  padding: 20px max(22px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom))
+    max(22px, env(safe-area-inset-left));
+  background: var(--panel);
+}
+
+/* The dashboard folds open above the keys and pushes the reading up. */
+.dashboard {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 220ms ease-out;
+}
+
+[data-panel='open'] .dashboard {
+  grid-template-rows: 1fr;
+}
+
+.dials {
+  display: flex;
+  justify-content: space-around;
+  min-height: 0;
+  overflow: hidden;
+}
+
+[data-panel='open'] .dials {
+  padding-bottom: 22px;
+}
+
+.keys {
+  display: flex;
+  align-items: flex-end;
+  gap: 18px;
+}
+
+.key-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mic {
+  flex: 1;
+  min-width: 0;
+}
+
+.grille {
+  width: 100%;
+  height: 58px;
+}
+
+/* ---------- Keys ---------- */
+
+.well {
+  display: inline-grid;
+  padding: 4px;
+  border-radius: 9px;
+  background: var(--well);
+  box-shadow:
+    inset 0 1px 2px rgb(0 0 0 / 0.6),
+    0 1px 0 rgb(255 255 255 / 0.04);
+}
+
+/*
+  Push-push keys. --lift is how far the cap stands above the well; the hard side
+  below it is exactly that tall, so its foot never moves.
+    out       5px
+    latched   2px  (aria-pressed)
+    pressed   0px  (finger down)
+*/
+.key {
+  --lift: 5px;
+  --cap: #2c2e32;
+  --side: #121315;
+  position: relative;
+  width: 64px;
+  height: 58px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: var(--cap);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.08),
+    0 var(--lift) 0 var(--side);
+  transform: translateY(calc(var(--lift) * -1));
+  transition:
+    transform 120ms ease-out,
+    box-shadow 120ms ease-out;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.key[aria-pressed='true'] {
+  --lift: 2px;
+}
+
+.key.pressed {
+  --lift: 0px;
+  transition-duration: 30ms;
+}
+
+.key:focus-visible {
+  outline: 2px solid var(--print-strong);
+  outline-offset: 6px;
+}
+
+.key-power {
+  --cap: #e7e2d6;
+  --side: #a39c8c;
+  width: 108px;
+}
+
+/* The pilot light: a small amber window in the power key. */
+.pilot {
+  position: absolute;
+  top: 10px;
+  left: 12px;
+  width: 18px;
+  height: 6px;
+  border-radius: 1.5px;
+  background: #5b4220;
+  box-shadow: inset 0 1px 1px rgb(0 0 0 / 0.35);
+}
+
+[data-power='on'] .pilot,
+[data-power='starting'] .pilot {
+  background: var(--amber);
+  box-shadow: 0 0 var(--led-glow) rgb(255 170 60 / 0.75);
+}
+
+[data-power='starting'] .pilot {
+  animation: blink 700ms steps(1) infinite;
+}
+
+/* The mic was refused: the key pops up and the pilot flashes three times. */
+[data-power='error'] .pilot {
+  animation: flash 500ms steps(1) 3;
+}
+
+@keyframes blink {
+  50% {
+    background: #5b4220;
+    box-shadow: none;
+  }
+}
+
+@keyframes flash {
+  0% {
+    background: var(--amber);
+    box-shadow: 0 0 var(--led-glow) rgb(255 170 60 / 0.75);
+  }
+  50% {
+    background: #5b4220;
+    box-shadow: none;
+  }
+}
+
+/* ---------- Dials ---------- */
+
+.dial-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.dial {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 128px;
+  height: 128px;
+  touch-action: none;
+  cursor: grab;
+}
+
+.dial:focus-visible {
+  outline: 2px solid var(--print-strong);
+  outline-offset: 2px;
+  border-radius: 50%;
+}
+
+.dial-scale {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+}
+
+.dial-scale .tick {
+  stroke: var(--print);
+  stroke-width: 1.2;
+}
+
+.dial-scale .tick.major {
+  stroke: var(--print-strong);
+  stroke-width: 1.8;
+}
+
+.dial-scale text {
+  fill: var(--print);
+  font-family: inherit;
+  font-size: 7.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-anchor: middle;
+  text-transform: uppercase;
+}
+
+/* A flat-topped knob standing on the panel. Only its pointer turns. */
+.knob {
+  position: relative;
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background: #2c2e32;
+  box-shadow:
+    inset 0 0 0 1px rgb(255 255 255 / 0.07),
+    inset 0 0 0 7px #27292c,
+    0 4px 0 #101113;
+  transition: box-shadow 80ms;
+}
+
+.dial.turning .knob {
+  box-shadow:
+    inset 0 0 0 1px rgb(255 255 255 / 0.1),
+    inset 0 0 0 7px #2a2c30,
+    0 4px 0 #101113;
+}
+
+.pointer {
+  position: absolute;
+  inset: 0;
+}
+
+.pointer span {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  width: 4px;
+  height: 20px;
+  margin-left: -2px;
+  border-radius: 1px;
+  background: var(--ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .key,
+  .dashboard {
+    transition: none;
+  }
+
+  [data-power='starting'] .pilot,
+  [data-power='error'] .pilot {
+    animation: none;
+  }
 }
