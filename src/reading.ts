@@ -6,9 +6,11 @@ import type { Note } from './pitch.ts';
     - Bars rest grey. The bar at the current pitch lights and grows longer, so both
       color and size carry the reading; its neighbors take a dim version of its
       color. It is red when off pitch and green when close (the bars either side of
-      center). Spot on (the center bar) lights the whole arc green.
+      center) or spot on (the center bar).
+    - Once a note has held spot on (`lock`), the rest of the arc fills grey to green
+      from the center out, and the five center bars' glow brightens, also from the
+      center out.
     - Between two bars, the light splits across both, so the reading glides.
-    - Once a note has held in tune (`lock`), the green bars glow a little brighter.
     - Nothing is drawn where nothing is lit.
     - The note letter sits dead center, under the center bar, and never moves; the
       sharp and octave hang off its right side.
@@ -29,8 +31,12 @@ const NEIGHBOR = 0.35;
 /** How much longer a fully lit bar grows; the center bar is the target and always longer. */
 const GROW = 0.4;
 const CENTER = 1.25;
-/** Extra glow on the bars at full lock, added to the glow layer only. */
+/** Extra glow at full lock, added to the glow layer only, on this many bars either side of center. */
 const LOCK_GLOW = 0.8;
+const LOCK_GLOW_BARS = 2;
+/** How far the outermost bar trails the center as the confirmation comes in, as a fraction of it. */
+const ARC_STAGGER = 0.5;
+const GLOW_STAGGER = 0.5;
 /** Height of the whole composition, arc to note, in radii. */
 const COMPOSITION = 2.26;
 
@@ -140,7 +146,8 @@ export class Reading {
     const loading = f.mode === 'loading';
     const off = loading ? LOADING_DARK : IDLE;
     const on = loading ? LOADING_LIGHT : f.close ? GREEN : RED;
-    const boost = f.mode === 'live' && f.tuned ? f.lock * LOCK_GLOW * f.brightness : 0;
+    // The confirmation only ever shows in green; leaving for red drops it at once.
+    const lock = f.mode === 'live' && f.close ? f.lock : 0;
 
     for (let i = -HALF; i <= HALF; i++) {
       // `glow` is how much of the lit color a bar takes; `grow` how much longer it gets.
@@ -155,8 +162,10 @@ export class Reading {
         const distance = Math.abs(i - position);
         const here = Math.max(0, 1 - distance) * f.strength;
         const beside = Math.max(0, 1 - Math.abs(distance - 1)) * NEIGHBOR * f.strength;
-        grow = f.tuned && i === 0 ? f.strength : here;
-        glow = f.tuned ? f.strength : Math.max(here, beside);
+        // Confirmation: the arc fills green from the center out.
+        const fill = staggered(lock, (Math.abs(i) / HALF) * ARC_STAGGER) * f.strength;
+        grow = here;
+        glow = Math.max(here, beside, fill);
         rest = ripple(f.time, i, IDLE_RIPPLE_MS) * IDLE_RIPPLE_DEPTH * (1 - f.strength);
       }
       const length = L.bar * (i === 0 ? CENTER : 1) * (1 + GROW * grow);
@@ -164,8 +173,12 @@ export class Reading {
       const angle = (i / HALF) * SWEEP;
       const color = mix(mix(off, LOADING_LIGHT, rest), on, glow);
       this.bar(this.ctx, L, angle, length, width, rgb(color, f.brightness));
-      // Drawn into the glow layer only, so just the halo grows.
-      if (boost > 0) this.bar(this.bloom, L, angle, length, width, rgb(GREEN, boost));
+      // The five center bars glow brighter, center first. Drawn into the glow layer
+      // only, so just the halo grows.
+      if (lock > 0 && Math.abs(i) <= LOCK_GLOW_BARS) {
+        const boost = staggered(lock, (Math.abs(i) / LOCK_GLOW_BARS) * GLOW_STAGGER) * LOCK_GLOW * f.brightness;
+        if (boost > 0) this.bar(this.bloom, L, angle, length, width, rgb(GREEN, boost));
+      }
     }
   }
 
@@ -219,6 +232,11 @@ function barFor(cents: number): number {
   else if (c <= CLOSE_CENTS) bar = 0.5 + (c - SPOT_ON_CENTS) / (CLOSE_CENTS - SPOT_ON_CENTS);
   else bar = 1.5 + (HALF - 1.5) * ((c - CLOSE_CENTS) / (50 - CLOSE_CENTS)) ** OUTER_CURVE;
   return Math.sign(cents) * bar;
+}
+
+/** How far along a bar is when the whole effect is at `amount` (0..1), starting `delay` late. */
+function staggered(amount: number, delay: number): number {
+  return Math.max(0, Math.min(1, (amount - delay) / (1 - delay)));
 }
 
 /** 0..1 brightness of bar `i` in a wave radiating out from the center bar. */
