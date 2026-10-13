@@ -18,7 +18,7 @@ A blocky, old-tech tuner: a grey casing with a dark screen running edge to edge 
   Settings are saved in the browser. With the tuner off, the reading shows a preview while the dashboard is open.
 - Keys stay down until their action has run, then move straight to their new position, so a key never bounces between states.
 - **Mic grille** (`src/grille.ts`): sits over the phone's own microphone. Four holes across; they light from the bottom up with input level, like a peak meter.
-- Errors (mic blocked, busy, missing, no https) show where the note goes, with a pixel warning triangle and an orange title. The power key pops back up and its pilot flashes orange.
+- Errors (mic blocked, busy, missing, no https) show where the note goes, under the grey gauge bars, with a pixel warning triangle and an orange title. The power key pops back up and its pilot flashes orange.
 - The page background is casing grey, so whatever Safari shows around the page matches the casing.
 
 ## Run

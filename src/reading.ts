@@ -28,8 +28,8 @@ const SWEEP_LIGHT = [210, 212, 208];
 const WHITE = [244, 243, 238];
 
 export interface Frame {
-  /** dark: off, nothing shown. sweep: starting up. live: listening. */
-  mode: 'dark' | 'sweep' | 'live';
+  /** dark: off, nothing shown. idle: grey bars only. sweep: starting up. live: listening. */
+  mode: 'dark' | 'idle' | 'sweep' | 'live';
   time: number;
   note: Note | null;
   /** Smoothed distance from pitch. */
@@ -117,7 +117,7 @@ export class Reading {
       let grow = 0;
       if (f.mode === 'sweep') {
         glow = grow = Math.max(0, 1 - Math.abs(i - head) / 1.5);
-      } else {
+      } else if (f.mode === 'live') {
         const here = Math.max(0, 1 - Math.abs(i - position)) * f.strength;
         grow = f.tuned && i === 0 ? f.strength : here;
         glow = f.tuned ? f.strength : here;
