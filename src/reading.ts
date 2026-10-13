@@ -34,6 +34,10 @@ const LOADING_LIGHT = [210, 212, 208];
 const RIPPLE_MS = 1300;
 /** How far behind the center the end bars pulse, as a fraction of a ripple. */
 const RIPPLE_LAG = 0.45;
+// Listening with nothing to read: the same ripple, slower and fainter, so the bars
+// show the tuner is still awake. It fades in as the last note fades out.
+const IDLE_RIPPLE_MS = 2600;
+const IDLE_RIPPLE_DEPTH = 0.3;
 const WHITE = [244, 243, 238];
 
 export interface Frame {
@@ -127,19 +131,22 @@ export class Reading {
       // `glow` is how much of the lit color a bar takes; `grow` how much longer it gets.
       let glow = 0;
       let grow = 0;
+      // `rest` lifts a resting bar toward light grey: the idle ripple.
+      let rest = 0;
       if (loading) {
-        const phase = f.time / RIPPLE_MS - (Math.abs(i) / HALF) * RIPPLE_LAG;
-        glow = (0.5 - 0.5 * Math.cos(2 * Math.PI * phase)) ** 2;
+        glow = ripple(f.time, i, RIPPLE_MS);
         grow = glow * 0.5;
       } else if (f.mode === 'live') {
         const here = Math.max(0, 1 - Math.abs(i - position)) * f.strength;
         grow = f.tuned && i === 0 ? f.strength : here;
         glow = f.tuned ? f.strength : here;
+        rest = ripple(f.time, i, IDLE_RIPPLE_MS) * IDLE_RIPPLE_DEPTH * (1 - f.strength);
       }
       const length = L.bar * (i === 0 ? CENTER : 1) * (1 + GROW * grow);
       const width = L.barWidth * (i === 0 ? 1.2 : 1);
       const angle = (i / HALF) * SWEEP;
-      this.bar(this.ctx, L, angle, length, width, rgb(mix(off, on, glow), f.brightness));
+      const color = mix(mix(off, LOADING_LIGHT, rest), on, glow);
+      this.bar(this.ctx, L, angle, length, width, rgb(color, f.brightness));
       // Drawn into the glow layer only, so just the halo grows.
       if (boost > 0) this.bar(this.bloom, L, angle, length, width, rgb(GREEN, boost));
     }
@@ -182,6 +189,12 @@ export class Reading {
     ctx.fillStyle = color;
     ctx.fill();
   }
+}
+
+/** 0..1 brightness of bar `i` in a wave radiating out from the center bar. */
+function ripple(time: number, i: number, period: number): number {
+  const phase = time / period - (Math.abs(i) / HALF) * RIPPLE_LAG;
+  return (0.5 - 0.5 * Math.cos(2 * Math.PI * phase)) ** 2;
 }
 
 /** Sizes the arc to the space, then sets the note inside it. */
