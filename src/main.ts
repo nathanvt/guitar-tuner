@@ -1,6 +1,6 @@
 import './style.css';
 import { PitchTracker, WINDOW, noteFromFrequency, type Note } from './pitch.ts';
-import { Reading } from './reading.ts';
+import { CLOSE_CENTS, Reading, SPOT_ON_CENTS } from './reading.ts';
 import { Grille } from './grille.ts';
 import { Dial } from './dial.ts';
 import { WARNING } from './pixelfont.ts';
@@ -10,9 +10,9 @@ type Glow = 'off' | 'low' | 'hi';
 
 // How long the last note lingers after the string goes quiet.
 const HOLD_MS = 1500;
-// In-tune band with hysteresis so the green doesn't flicker at the edge.
-const TUNED_ENTER = 3;
-const TUNED_EXIT = 5;
+// Each green state is entered inside its band and left 1¢ outside it, so the
+// colors don't flicker at the edges.
+const HYSTERESIS_CENTS = 1;
 // How long a note must hold in tune before the display confirms it, and how
 // quickly the confirmation eases in and out.
 const LOCK_AFTER_MS = 300;
@@ -72,6 +72,7 @@ const samples = new Float32Array(WINDOW);
 let note: Note | null = null;
 let heardAt = -Infinity;
 let tuned = false;
+let close = false;
 let cents = 0;
 let strength = 0;
 let tunedAt = -Infinity;
@@ -324,7 +325,7 @@ function paint(now: number) {
   ui.device.dataset.preview = String(preview);
   if (preview) {
     showLock(1);
-    reading.draw({ mode: 'live', time: now, note: PREVIEW_NOTE, cents: 0, strength: 1, tuned: true, brightness, lock: 1 });
+    reading.draw({ mode: 'live', time: now, note: PREVIEW_NOTE, cents: 0, strength: 1, tuned: true, close: true, brightness, lock: 1 });
     return;
   }
 
@@ -337,10 +338,12 @@ function paint(now: number) {
     cents = strength < 0.02 ? note.cents : cents + (note.cents - cents) * ease(FOLLOW_MS);
     const off = Math.abs(note.cents);
     const was = tuned;
-    tuned = tuned ? off < TUNED_EXIT : off < TUNED_ENTER;
+    tuned = off < SPOT_ON_CENTS + (tuned ? HYSTERESIS_CENTS : 0);
+    close = tuned || off < CLOSE_CENTS + (close ? HYSTERESIS_CENTS : 0);
     if (tuned && !was) tunedAt = now;
   } else {
     tuned = false;
+    close = false;
   }
   // The confirmation only comes once the note has held in tune for a moment.
   const locked = tuned && now - tunedAt >= LOCK_AFTER_MS;
@@ -364,6 +367,7 @@ function paint(now: number) {
     cents,
     strength,
     tuned,
+    close,
     brightness,
     lock,
   });

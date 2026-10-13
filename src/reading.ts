@@ -3,10 +3,10 @@ import type { Note } from './pitch.ts';
 
 /*
   The reading, on open space: an arc of LED bars above a white pixel note.
-    - Bars rest grey. The bar at the current pitch lights red and grows longer, so
-      both color and size carry the reading; its neighbors take a dim version of
-      its color. The scale is finer near the center, where the three center bars
-      cover the ±3¢ in-tune band. In tune, the whole arc lights green.
+    - Bars rest grey. The bar at the current pitch lights and grows longer, so both
+      color and size carry the reading; its neighbors take a dim version of its
+      color. It is red when off pitch and green when close (the bars either side of
+      center). Spot on (the center bar) lights the whole arc green.
     - Between two bars, the light splits across both, so the reading glides.
     - Once a note has held in tune (`lock`), the green bars glow a little brighter.
     - Nothing is drawn where nothing is lit.
@@ -18,8 +18,12 @@ import type { Note } from './pitch.ts';
 const HALF = 8;
 /** The arc spans ±60° from straight up, leaving room for the note's side column below its ends. */
 const SWEEP = (60 * Math.PI) / 180;
-/** Below 1, bars near the center cover fewer cents: at 0.6, ±3¢ reaches the edge of the center three. */
-const CURVE = 0.6;
+/** Spot on: the center bar, ±2¢. */
+export const SPOT_ON_CENTS = 2;
+/** Close: the bars either side of center, out to ±5¢. */
+export const CLOSE_CENTS = 5;
+/** Beyond close, the outer bars cover the rest of ±50¢, finer toward the middle. */
+const OUTER_CURVE = 0.75;
 /** How much of the lit color the bars either side of the reading take. */
 const NEIGHBOR = 0.35;
 /** How much longer a fully lit bar grows; the center bar is the target and always longer. */
@@ -55,7 +59,10 @@ export interface Frame {
   cents: number;
   /** 0..1, how present the reading is: fades in on a note, out after it. */
   strength: number;
+  /** Spot on: the whole arc lights green. */
   tuned: boolean;
+  /** Close: the reading lights green, without the whole arc. True whenever `tuned` is. */
+  close: boolean;
   /** 0..1, from the brightness dial. */
   brightness: number;
   /** 0..1, how settled the in-tune confirmation is. */
@@ -127,12 +134,12 @@ export class Reading {
   }
 
   private gauge(L: Layout, f: Frame) {
-    const exact = Math.sign(f.cents) * Math.min(1, Math.abs(f.cents) / 50) ** CURVE * HALF;
-    // While in tune, the reading stays inside the green center three.
-    const position = f.tuned ? Math.max(-1, Math.min(1, exact)) : exact;
+    // Spot on holds the reading on the center bar; close keeps it inside the center three.
+    const exact = barFor(f.cents);
+    const position = f.tuned ? 0 : f.close ? Math.max(-1, Math.min(1, exact)) : exact;
     const loading = f.mode === 'loading';
     const off = loading ? LOADING_DARK : IDLE;
-    const on = loading ? LOADING_LIGHT : f.tuned ? GREEN : RED;
+    const on = loading ? LOADING_LIGHT : f.close ? GREEN : RED;
     const boost = f.mode === 'live' && f.tuned ? f.lock * LOCK_GLOW * f.brightness : 0;
 
     for (let i = -HALF; i <= HALF; i++) {
@@ -199,6 +206,19 @@ export class Reading {
     ctx.fillStyle = color;
     ctx.fill();
   }
+}
+
+/**
+ * Bar position for a distance from pitch, in bars from center (signed). The center
+ * bar covers ±2¢, the next ones reach ±5¢, and the outer six cover the rest.
+ */
+function barFor(cents: number): number {
+  const c = Math.min(50, Math.abs(cents));
+  let bar: number;
+  if (c <= SPOT_ON_CENTS) bar = (c / SPOT_ON_CENTS) * 0.5;
+  else if (c <= CLOSE_CENTS) bar = 0.5 + (c - SPOT_ON_CENTS) / (CLOSE_CENTS - SPOT_ON_CENTS);
+  else bar = 1.5 + (HALF - 1.5) * ((c - CLOSE_CENTS) / (50 - CLOSE_CENTS)) ** OUTER_CURVE;
+  return Math.sign(cents) * bar;
 }
 
 /** 0..1 brightness of bar `i` in a wave radiating out from the center bar. */
