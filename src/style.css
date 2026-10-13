@@ -1,0 +1,271 @@
+:root {
+  color-scheme: dark;
+  --bg: #0b0c0e;
+  --ink: #f2f3f5;
+  --muted: #8b919a;
+  --tick: #3d424a;
+  --tick-major: #5f6570;
+  --good: #5ee08f;
+  --good-glow: rgb(94 224 143 / 0.45);
+  --glass: rgb(255 255 255 / 0.05);
+  --glass-edge: rgb(255 255 255 / 0.1);
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  -webkit-text-size-adjust: 100%;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+body {
+  background: radial-gradient(120% 70% at 50% 0%, #171a1f 0%, var(--bg) 65%) var(--bg);
+  color: var(--ink);
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.tuner {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  height: 100dvh;
+  max-width: 520px;
+  margin: 0 auto;
+  padding: max(16px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right))
+    max(24px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
+}
+
+/* Supporting UI: small, left-aligned, out of the way. */
+.meta {
+  display: flex;
+  gap: 14px;
+  padding-top: 8px;
+}
+
+.label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.label.dim {
+  opacity: 0.6;
+}
+
+/* Readout: gauge, note, cents. */
+.readout {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.gauge {
+  width: 100%;
+  max-width: 420px;
+  overflow: visible;
+}
+
+.ticks line {
+  stroke: var(--tick);
+  stroke-width: 2;
+  stroke-linecap: round;
+  transition: stroke 150ms;
+}
+
+.ticks .major {
+  stroke: var(--tick-major);
+  stroke-width: 2.5;
+}
+
+.ticks .center {
+  stroke: var(--ink);
+  stroke-width: 3;
+}
+
+.gauge text {
+  fill: var(--muted);
+  font-size: 18px;
+  text-anchor: middle;
+}
+
+.needle line {
+  stroke: var(--ink);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.needle circle {
+  fill: var(--ink);
+}
+
+.needle line,
+.needle circle {
+  transition: stroke 150ms, fill 150ms;
+}
+
+.needle {
+  transition: opacity 250ms;
+}
+
+.note {
+  display: flex;
+  align-items: flex-start;
+  margin: 8px 0 0;
+  font-size: clamp(96px, 30vw, 150px);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  transition: color 150ms, opacity 250ms, text-shadow 150ms;
+}
+
+.accidental {
+  font-size: 0.42em;
+  margin-top: 0.12em;
+}
+
+.octave {
+  align-self: flex-end;
+  margin: 0 0 0.08em 0.04em;
+  font-size: 0.28em;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.cents {
+  min-height: 1.4em;
+  margin: 6px 0 0;
+  font-size: 17px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  transition: color 150ms;
+}
+
+/* Signal states. */
+[data-signal='none'] .needle {
+  opacity: 0.25;
+}
+
+[data-signal='none'] .note {
+  color: var(--muted);
+  opacity: 0.4;
+}
+
+[data-signal='held'] .note {
+  opacity: 0.55;
+}
+
+[data-tuned='true'] .note,
+[data-tuned='true'] .cents {
+  color: var(--good);
+}
+
+[data-tuned='true'] .note {
+  text-shadow: 0 0 36px var(--good-glow);
+}
+
+[data-tuned='true'] .needle line,
+[data-tuned='true'] .ticks .center {
+  stroke: var(--good);
+}
+
+[data-tuned='true'] .needle circle {
+  fill: var(--good);
+}
+
+/* Open strings, low to high. */
+.strings {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.strings li {
+  padding: 12px 0;
+  border: 1px solid var(--glass-edge);
+  border-radius: 14px;
+  background: var(--glass);
+  color: var(--muted);
+  font-size: 17px;
+  font-weight: 600;
+  text-align: center;
+  transition: background 150ms, color 150ms, border-color 150ms;
+}
+
+.strings li.active {
+  background: rgb(255 255 255 / 0.12);
+  border-color: rgb(255 255 255 / 0.22);
+  color: var(--ink);
+}
+
+[data-tuned='true'] .strings li.active {
+  background: rgb(94 224 143 / 0.16);
+  border-color: rgb(94 224 143 / 0.45);
+  color: var(--good);
+}
+
+/* Start overlay: the whole screen is the tap target. */
+.start {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 24px;
+  border: 0;
+  background: rgb(11 12 14 / 0.55);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+
+[data-state='listening'] .start {
+  display: none;
+}
+
+.pill {
+  padding: 16px 30px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--bg);
+  font-size: 17px;
+  font-weight: 600;
+  transition: transform 120ms;
+}
+
+.start:active .pill {
+  transform: scale(0.97);
+}
+
+.hint {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.error {
+  max-width: 300px;
+  font-size: 14px;
+  line-height: 1.4;
+  color: #f5c06b;
+  text-align: center;
+}

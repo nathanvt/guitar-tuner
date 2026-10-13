@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Tuner</title>
+    <meta name="description" content="A chromatic guitar tuner that listens through the microphone." />
+    <meta name="theme-color" content="#0b0c0e" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Tuner" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <script type="module" src="/src/main.ts"></script>
+  </head>
+  <body>
+    <main class="tuner" data-state="idle" data-signal="none">
+      <header class="meta">
+        <span class="label">Tuner</span>
+        <span class="label dim">A4 440 Hz</span>
+      </header>
+
+      <section class="readout">
+        <svg class="gauge" viewBox="0 0 320 172" aria-hidden="true">
+          <g class="ticks"></g>
+          <text class="flat" x="34" y="92">♭</text>
+          <text class="sharp" x="286" y="92">♯</text>
+          <g class="needle">
+            <line x1="160" y1="160" x2="160" y2="36" />
+            <circle cx="160" cy="160" r="7" />
+          </g>
+        </svg>
+        <p class="note"><span class="letter">–</span><span class="accidental"></span><span class="octave"></span></p>
+        <p class="cents">Play a string</p>
+      </section>
+
+      <ol class="strings" aria-label="Standard tuning"></ol>
+
+      <button class="start" type="button">
+        <span class="pill">Tap to tune</span>
+        <span class="hint">Uses the microphone. Sound stays on this phone.</span>
+        <span class="error" hidden></span>
+      </button>
+    </main>
+  </body>
+</html>
