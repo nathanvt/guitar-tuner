@@ -83,14 +83,16 @@ const resizer = new ResizeObserver((entries) => {
     if (target === ui.reading) {
       reading.resize(contentRect.width, contentRect.height);
       ui.message.style.top = `${reading.noteCenter}px`;
-    } else {
+    } else if (target === ui.grille) {
       grille.resize(contentRect.width, contentRect.height);
     }
   }
+  fitLid();
   paint(performance.now());
 });
 resizer.observe(ui.reading);
 resizer.observe(ui.grille);
+resizer.observe(ui.dashboard);
 
 setGlow(settings.glow);
 setPower('off');
@@ -100,7 +102,7 @@ pushKey(ui.controls, () => {
   panelOpen = !panelOpen;
   ui.device.dataset.panel = panelOpen ? 'open' : 'closed';
   ui.controls.setAttribute('aria-pressed', String(panelOpen));
-  ui.dashboard.hidden = !panelOpen;
+  ui.dashboard.inert = !panelOpen;
   paint(performance.now());
 });
 
@@ -254,6 +256,21 @@ function setPower(next: Power) {
   ui.messageTitle.textContent = message.title;
   ui.messageDetail.textContent = message.detail;
   paint(performance.now());
+}
+
+/**
+ * How the screen lifts to uncover the controls tray: its bottom edge rises by the
+ * tray's height, and the reading moves up by half that so it stays centered in what's
+ * left, shrinking only if it wouldn't otherwise fit. CSS animates both as transforms,
+ * so the reading is never redrawn mid-lift.
+ */
+function fitLid() {
+  const tray = ui.dashboard.offsetHeight;
+  const visible = ui.reading.clientHeight - tray;
+  const fit = Math.min(1, (visible - 24) / (reading.compositionHeight || 1));
+  ui.device.style.setProperty('--tray', `${tray}px`);
+  ui.device.style.setProperty('--shift', `${-tray / 2}px`);
+  ui.device.style.setProperty('--fit', Math.max(0.4, fit).toFixed(3));
 }
 
 function setGlow(glow: Glow) {

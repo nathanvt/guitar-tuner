@@ -31,6 +31,8 @@
   --green: #2ee27a;
   --green-dark: #1d4630;
   --orange: #ff8a1f;
+  --tray-color: #1e232a;
+  --lid: cubic-bezier(0.2, 0.8, 0.2, 1);
 
   font-family: 'Unbounded Variable', -apple-system, BlinkMacSystemFont, sans-serif;
   -webkit-text-size-adjust: 100%;
@@ -105,21 +107,48 @@ p {
   white-space: nowrap;
 }
 
-/* ---------- Reading ---------- */
+/* ---------- Screen and controls tray ---------- */
 
-/* The screen: dark, edge to edge across the casing. */
-.reading {
+.stage {
   position: relative;
   flex: 1 1 auto;
-  min-height: 220px;
+  min-height: 260px;
+}
+
+/*
+  The screen: dark, edge to edge across the casing, and a lid over the controls tray.
+  Opening the controls raises its bottom edge by the tray's height (--tray), while the
+  reading inside moves up half that (--shift) and shrinks if it must (--fit) to stay
+  centered in what's left. Both are clip and transform changes, so nothing re-lays out.
+*/
+.reading {
+  position: absolute;
+  inset: 0;
   background: var(--space);
+  clip-path: inset(0px 0px 0px 0px);
+  transition: clip-path 320ms var(--lid);
+}
+
+[data-panel='open'] .reading {
+  clip-path: inset(0px 0px var(--tray, 0px) 0px);
+}
+
+.screen-content {
+  position: absolute;
+  inset: 0;
+  transform-origin: 50% 50%;
+  transition: transform 320ms var(--lid);
+}
+
+[data-panel='open'] .screen-content {
+  transform: translateY(var(--shift, 0px)) scale(var(--fit, 1));
 }
 
 .device:is([data-power='off'], [data-power='error']) .reading {
   cursor: pointer;
 }
 
-.reading canvas {
+.screen-content canvas {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -127,7 +156,7 @@ p {
 }
 
 /* A blurred copy of the lights underneath them; its strength comes from the glow setting. */
-.reading .bloom {
+.screen-content .bloom {
   filter: blur(var(--bloom-blur));
   opacity: var(--bloom);
 }
@@ -198,30 +227,29 @@ p {
     max(22px, env(safe-area-inset-left));
 }
 
-/*
-  The dashboard opens in one step, so the reading re-lays out once rather than on
-  every frame of an animation. Only its own contents ease in.
-*/
+/* The controls tray: anchored at the bottom of the stage, under the screen. */
 .dashboard {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 18px max(22px, env(safe-area-inset-right)) 22px max(22px, env(safe-area-inset-left));
+  background: var(--tray-color);
+  /* The lifted screen's edge casts a soft shadow across the top of the tray. */
+  box-shadow: inset 0 14px 16px -14px rgb(0 0 0 / 0.75);
+}
+
+.dashboard-title {
+  margin: 0 0 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgb(255 255 255 / 0.08);
+  color: var(--print-strong);
+}
+
+.settings {
   display: flex;
   align-items: flex-end;
   justify-content: space-around;
-  padding-bottom: 24px;
-}
-
-.dashboard[hidden] {
-  display: none;
-}
-
-.dashboard > * {
-  animation: ease-in 180ms ease-out both;
-}
-
-@keyframes ease-in {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
 }
 
 .setting {
@@ -476,11 +504,12 @@ p {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .key {
+  .key,
+  .reading,
+  .screen-content {
     transition: none;
   }
 
-  .dashboard > *,
   [data-power='starting'] .pilot,
   [data-power='error'] .pilot {
     animation: none;

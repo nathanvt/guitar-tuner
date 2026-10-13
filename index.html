@@ -21,35 +21,43 @@
         <span class="label">tn-6 chromatic</span>
       </header>
 
-      <div class="reading" aria-label="Turn the tuner on">
-        <canvas class="bloom" aria-hidden="true"></canvas>
-        <canvas class="lights" aria-hidden="true"></canvas>
-        <div class="message">
-          <svg class="message-icon" aria-hidden="true"></svg>
-          <p class="message-title"></p>
-          <p class="message-detail"></p>
+      <!-- The screen is a lid: it lifts to uncover the controls tray beneath it. -->
+      <div class="stage">
+        <section class="dashboard" id="dashboard" aria-label="Controls" inert>
+          <h2 class="dashboard-title label">controls</h2>
+          <div class="settings">
+            <div class="setting">
+              <div class="dial" data-dial="brightness" role="slider" tabindex="0" aria-label="Brightness" aria-valuemin="0" aria-valuemax="100">
+                <svg class="dial-scale" viewBox="-64 -64 128 128" aria-hidden="true"></svg>
+                <span class="knob"><span class="pointer"><span></span></span></span>
+              </div>
+              <span class="label">brightness</span>
+            </div>
+            <div class="setting">
+              <span class="well bank" role="radiogroup" aria-label="Glow">
+                <button class="key key-small" type="button" role="radio" aria-checked="false" data-glow="off"><span class="legend">off</span></button>
+                <button class="key key-small" type="button" role="radio" aria-checked="false" data-glow="low"><span class="legend">low</span></button>
+                <button class="key key-small" type="button" role="radio" aria-checked="false" data-glow="hi"><span class="legend">hi</span></button>
+              </span>
+              <span class="label"><i class="glow-led"></i>glow</span>
+            </div>
+          </div>
+        </section>
+
+        <div class="reading" aria-label="Turn the tuner on">
+          <div class="screen-content">
+            <canvas class="bloom" aria-hidden="true"></canvas>
+            <canvas class="lights" aria-hidden="true"></canvas>
+            <div class="message">
+              <svg class="message-icon" aria-hidden="true"></svg>
+              <p class="message-title"></p>
+              <p class="message-detail"></p>
+            </div>
+          </div>
         </div>
       </div>
 
       <section class="panel">
-        <div class="dashboard" id="dashboard" hidden>
-          <div class="setting">
-            <div class="dial" data-dial="brightness" role="slider" tabindex="0" aria-label="Brightness" aria-valuemin="0" aria-valuemax="100">
-              <svg class="dial-scale" viewBox="-64 -64 128 128" aria-hidden="true"></svg>
-              <span class="knob"><span class="pointer"><span></span></span></span>
-            </div>
-            <span class="label">brightness</span>
-          </div>
-          <div class="setting">
-            <span class="well bank" role="radiogroup" aria-label="Glow">
-              <button class="key key-small" type="button" role="radio" aria-checked="false" data-glow="off"><span class="legend">off</span></button>
-              <button class="key key-small" type="button" role="radio" aria-checked="false" data-glow="low"><span class="legend">low</span></button>
-              <button class="key key-small" type="button" role="radio" aria-checked="false" data-glow="hi"><span class="legend">hi</span></button>
-            </span>
-            <span class="label"><i class="glow-led"></i>glow</span>
-          </div>
-        </div>
-
         <div class="keys">
           <span class="well">
             <button class="key key-power" type="button" aria-pressed="false">

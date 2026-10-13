@@ -11,7 +11,7 @@ A blocky, old-tech tuner: a grey casing with a dark screen running edge to edge 
 - **Gauge** (`src/reading.ts`): an arc of 17 wide LED bars above the note, covering −50¢ to +50¢. The bars rest grey. The bar at the current pitch lights red and grows longer; between two bars the light splits across both, so the reading glides. Within 3¢, the whole arc lights green. Nothing is drawn while the tuner is off.
 - **Note:** a white pixel letter, centered under the center bar. It never moves; the sharp and octave hang off its right side. No words appear while listening.
 - **Power:** a push-push key with a pilot light: an unlit dark green while off, lit green (with glow) while on. A tap on the reading area also turns the tuner on, and leaving the app turns it off.
-- **Controls:** a second push-push key that opens a dashboard:
+- **Controls:** a second push-push key. The screen lifts like a lid to uncover a slate-grey controls tray anchored beneath it; the reading glides up (and shrinks only if it must) to stay centered in what's left. The lift is all clip and transform, so the reading isn't redrawn mid-animation. In the tray:
   - **Brightness** dial (0–10), in `src/dial.ts`. Turn it by dragging up or right, or with the arrow keys.
   - **Glow:** three interlocking keys, off / low / hi, for the light around the reading, the pilot light and the mic grille. Touching one latches it and releases the others. A small green light beside the label shows the current strength.
 

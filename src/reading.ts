@@ -18,6 +18,8 @@ const SWEEP = (60 * Math.PI) / 180;
 /** How much longer a fully lit bar grows; the center bar is the target and always longer. */
 const GROW = 0.4;
 const CENTER = 1.25;
+/** Height of the whole composition, arc to note, in radii. */
+const COMPOSITION = 2.26;
 
 const IDLE = [63, 67, 74];
 const RED = [255, 59, 47];
@@ -66,6 +68,11 @@ export class Reading {
   constructor(canvas: HTMLCanvasElement, bloom: HTMLCanvasElement) {
     this.ctx = canvas.getContext('2d')!;
     this.bloom = bloom.getContext('2d')!;
+  }
+
+  /** Height of the arc and note together, in CSS pixels. */
+  get compositionHeight(): number {
+    return this.layout ? this.layout.radius * COMPOSITION : 0;
   }
 
   /** Vertical center of the note, in CSS pixels, for text that takes its place. */
@@ -163,14 +170,14 @@ export class Reading {
 
 /** Sizes the arc to the space, then sets the note inside it. */
 function layout(width: number, height: number): Layout {
-  // The composition is about 2.26 radii tall and 2.1 radii wide.
-  const radius = Math.min(width * 0.44, (height - 24) / 2.26);
+  // The composition is COMPOSITION radii tall and about 2.1 radii wide.
+  const radius = Math.min(width * 0.44, (height - 24) / COMPOSITION);
   const bar = radius * 0.2;
   const pitch = radius * 0.19;
   const small = pitch * 0.38;
   // The tallest mark is the lit center bar.
   const reach = radius - bar / 2 + bar * CENTER * (1 + GROW);
-  const top = (height - radius * 2.26) / 2;
+  const top = (height - radius * COMPOSITION) / 2;
   const cx = width / 2;
   const cy = top + reach;
 
