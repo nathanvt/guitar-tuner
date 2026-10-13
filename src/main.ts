@@ -13,6 +13,11 @@ const HOLD_MS = 1500;
 // In-tune band with hysteresis so the green doesn't flicker at the edge.
 const TUNED_ENTER = 3;
 const TUNED_EXIT = 5;
+// How long a note must hold in tune before the display confirms it, and how
+// quickly the confirmation eases in and out.
+const LOCK_AFTER_MS = 400;
+const LOCK_IN_MS = 180;
+const LOCK_OUT_MS = 150;
 // Easing time constants, in ms: the reading follows pitch at a calm pace, fades in
 // fast and out slowly. Time-based, so 60 Hz and 120 Hz screens move alike.
 const FOLLOW_MS = 100;
@@ -69,6 +74,9 @@ let heardAt = -Infinity;
 let tuned = false;
 let cents = 0;
 let strength = 0;
+let tunedAt = -Infinity;
+let lock = 0;
+let lockShown = '';
 let paintedAt = performance.now();
 
 const levelOf = (value: number) => Math.round(value * 2 * BRIGHTNESS_STEPS) - BRIGHTNESS_STEPS;
@@ -315,7 +323,8 @@ function paint(now: number) {
   const preview = panelOpen && (power === 'off' || power === 'error');
   ui.device.dataset.preview = String(preview);
   if (preview) {
-    reading.draw({ mode: 'live', time: now, note: PREVIEW_NOTE, cents: 0, strength: 1, tuned: true, brightness });
+    showLock(1);
+    reading.draw({ mode: 'live', time: now, note: PREVIEW_NOTE, cents: 0, strength: 1, tuned: true, brightness, lock: 1 });
     return;
   }
 
@@ -327,10 +336,22 @@ function paint(now: number) {
     // Jump straight to the first reading; glide after that.
     cents = strength < 0.02 ? note.cents : cents + (note.cents - cents) * ease(FOLLOW_MS);
     const off = Math.abs(note.cents);
+    const was = tuned;
     tuned = tuned ? off < TUNED_EXIT : off < TUNED_ENTER;
+    if (tuned && !was) tunedAt = now;
   } else {
     tuned = false;
   }
+  // The confirmation only comes once the note has held in tune for a moment.
+  const locked = tuned && now - tunedAt >= LOCK_AFTER_MS;
+  if (power === 'on') {
+    lock += ((locked ? 1 : 0) - lock) * ease(locked ? LOCK_IN_MS : LOCK_OUT_MS);
+    if (lock < 0.005) lock = 0;
+  } else {
+    // Nothing is animating when the tuner isn't listening, so don't leave it mid-fade.
+    lock = 0;
+  }
+  showLock(lock);
   const target = live ? 1 : held ? 0.5 : 0;
   strength += (target - strength) * ease(target > strength ? FADE_IN_MS : FADE_OUT_MS);
   if (strength < 0.005) strength = 0;
@@ -344,7 +365,16 @@ function paint(now: number) {
     strength,
     tuned,
     brightness,
+    lock,
   });
+}
+
+/** Drives the green gradient at the top of the screen, in twentieths to limit restyling. */
+function showLock(amount: number) {
+  const step = (Math.round(amount * 20) / 20).toFixed(2);
+  if (step === lockShown) return;
+  lockShown = step;
+  ui.device.style.setProperty('--lock', step);
 }
 
 /** `brightness` is a dial step, -5..+5. */

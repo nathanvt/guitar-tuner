@@ -1,38 +1,44 @@
-// Draws the app icons (same art as public/favicon.svg) and writes them as PNGs.
+// Draws the app icons and favicon to match the tuner: casing grey, a dark screen band,
+// the arc of bars lit green as when in tune, and a white pixel E.
 // No image libraries: shapes are signed-distance fields, PNG is encoded by hand.
 // Run: npm run icons
 import { deflateSync } from 'node:zlib';
 import { mkdirSync, writeFileSync } from 'node:fs';
 
-const OUT = new URL('../public/icons/', import.meta.url);
+const OUT = new URL('../public/', import.meta.url);
 
-// Geometry in a 0..1 square, matching the favicon's 64-unit layout.
-const PIVOT = [0.5, 42 / 64];
-const ARC_RADIUS = 20 / 64;
-const ARC_HALF_ANGLE = (50 * Math.PI) / 180;
-const ARC_WIDTH = 3.2 / 64;
-const NEEDLE_TOP = 17 / 64;
-const NEEDLE_WIDTH = 3.6 / 64;
-const DOT_RADIUS = 4 / 64;
+const CASING = [27, 28, 31];
+const SCREEN = [14, 15, 17];
+const GREEN = [46, 226, 122];
+const WHITE = [244, 243, 238];
 
-const BG_TOP = [23, 26, 31];
-const BG = [11, 12, 14];
-const ARC = [95, 101, 112];
-const GOOD = [94, 224, 143];
+// Geometry in a 0..1 square. Every mark sits inside the maskable safe circle (radius 0.4).
+const BAND = { top: 0.18, bottom: 0.82 };
+const ARC = { cx: 0.5, cy: 0.6, radius: 0.28, half: 4, sweep: (60 * Math.PI) / 180, length: 0.075, width: 0.04 };
+const CENTER_LENGTH = 1.3;
+const E = ['#####', '#....', '#....', '####.', '#....', '#....', '#####'];
+const PITCH = 0.036;
+const NOTE = { x: 0.5 - (5 * PITCH) / 2, y: 0.5 };
 
-// Every shape keeps its whole body inside the maskable safe circle (radius 0.4).
-const icons = [
+const bars = [];
+for (let i = -ARC.half; i <= ARC.half; i++) {
+  bars.push({ angle: (i / ARC.half) * ARC.sweep, length: ARC.length * (i === 0 ? CENTER_LENGTH : 1) });
+}
+const pixels = [];
+E.forEach((row, r) => [...row].forEach((dot, c) => dot === '#' && pixels.push({ x: NOTE.x + c * PITCH, y: NOTE.y + r * PITCH })));
+
+mkdirSync(new URL('icons/', OUT), { recursive: true });
+for (const [name, size] of [
   ['apple-touch-icon.png', 180],
   ['icon-192.png', 192],
   ['icon-512.png', 512],
   ['icon-512-maskable.png', 512],
-];
-
-mkdirSync(OUT, { recursive: true });
-for (const [name, size] of icons) {
-  writeFileSync(new URL(name, OUT), encodePng(size, draw(size)));
+]) {
+  writeFileSync(new URL(`icons/${name}`, OUT), encodePng(size, draw(size)));
   console.log(`wrote public/icons/${name} (${size}×${size})`);
 }
+writeFileSync(new URL('favicon.svg', OUT), favicon());
+console.log('wrote public/favicon.svg');
 
 function draw(size) {
   const px = Buffer.alloc(size * size * 4);
@@ -40,12 +46,17 @@ function draw(size) {
     for (let x = 0; x < size; x++) {
       const u = (x + 0.5) / size;
       const v = (y + 0.5) / size;
-      // Soft light from the top, like the app background.
-      const glow = Math.max(0, 1 - Math.hypot((u - 0.5) / 1.2, v / 0.7) / 0.65);
-      let color = mix(BG, BG_TOP, glow);
-      color = mix(color, ARC, coverage(arcDistance(u, v), size));
-      color = mix(color, GOOD, coverage(segmentDistance(u, v, PIVOT, [0.5, NEEDLE_TOP]) - NEEDLE_WIDTH / 2, size));
-      color = mix(color, GOOD, coverage(Math.hypot(u - PIVOT[0], v - PIVOT[1]) - DOT_RADIUS, size));
+      const onScreen = v >= BAND.top && v <= BAND.bottom;
+      let color = onScreen ? SCREEN : CASING;
+
+      const bar = Math.min(...bars.map((b) => barDistance(u, v, b)));
+      // Soft green light around the bars, on the screen only.
+      if (onScreen) color = mix(color, GREEN, 0.3 * Math.exp(-Math.max(bar, 0) / 0.03));
+      color = mix(color, GREEN, coverage(bar, size));
+
+      const note = Math.min(...pixels.map((p) => pixelDistance(u, v, p)));
+      color = mix(color, WHITE, coverage(note, size));
+
       const i = (y * size + x) * 4;
       px[i] = color[0];
       px[i + 1] = color[1];
@@ -56,23 +67,26 @@ function draw(size) {
   return px;
 }
 
-/** Distance to the gauge arc (round-capped), minus half its stroke. */
-function arcDistance(u, v) {
-  const dx = u - PIVOT[0];
-  const dy = v - PIVOT[1];
-  const angle = Math.atan2(dx, -dy); // 0 = straight up
-  if (Math.abs(angle) <= ARC_HALF_ANGLE) {
-    return Math.abs(Math.hypot(dx, dy) - ARC_RADIUS) - ARC_WIDTH / 2;
-  }
-  const end = Math.sign(angle) * ARC_HALF_ANGLE;
-  const ex = PIVOT[0] + ARC_RADIUS * Math.sin(end);
-  const ey = PIVOT[1] - ARC_RADIUS * Math.cos(end);
-  return Math.hypot(u - ex, v - ey) - ARC_WIDTH / 2;
+/** Distance to one bar: a rounded rectangle standing on the arc, pointing out from its center. */
+function barDistance(u, v, { angle, length }) {
+  const dx = u - ARC.cx;
+  const dy = v - ARC.cy;
+  const along = dx * Math.sin(angle) - dy * Math.cos(angle);
+  const across = dx * Math.cos(angle) + dy * Math.sin(angle);
+  const inner = ARC.radius - ARC.length / 2;
+  return roundedRect(along - (inner + length / 2), across, length / 2, ARC.width / 2, 0.005);
 }
 
-function segmentDistance(u, v, [ax, ay], [bx, by]) {
-  const t = Math.max(0, Math.min(1, ((u - ax) * (bx - ax) + (v - ay) * (by - ay)) / ((bx - ax) ** 2 + (by - ay) ** 2)));
-  return Math.hypot(u - (ax + t * (bx - ax)), v - (ay + t * (by - ay)));
+/** Distance to one pixel of the note: a square with a small gap and a hint of rounding. */
+function pixelDistance(u, v, p) {
+  const side = PITCH * 0.88;
+  return roundedRect(u - (p.x + PITCH / 2), v - (p.y + PITCH / 2), side / 2, side / 2, side * 0.1);
+}
+
+function roundedRect(px, py, hx, hy, r) {
+  const qx = Math.abs(px) - hx + r;
+  const qy = Math.abs(py) - hy + r;
+  return Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - r;
 }
 
 /** Antialiased fill amount for a signed distance, measured in pixels. */
@@ -82,6 +96,34 @@ function coverage(distance, size) {
 
 function mix(a, b, t) {
   return [0, 1, 2].map((i) => Math.round(a[i] + (b[i] - a[i]) * t));
+}
+
+/** The same design as SVG, on a 64-unit grid with rounded corners for browser tabs. */
+function favicon() {
+  const s = 64;
+  const hex = ([r, g, b]) => `#${[r, g, b].map((n) => n.toString(16).padStart(2, '0')).join('')}`;
+  const n = (value) => +(value * s).toFixed(2);
+  const inner = ARC.radius - ARC.length / 2;
+  const barMarks = bars
+    .map(
+      (b) =>
+        `<rect x="${n(-ARC.width / 2)}" y="${n(-(inner + b.length))}" width="${n(ARC.width)}" height="${n(b.length)}" rx="0.4" transform="translate(${n(ARC.cx)} ${n(ARC.cy)}) rotate(${((b.angle * 180) / Math.PI).toFixed(2)})"/>`,
+    )
+    .join('');
+  const side = PITCH * 0.88;
+  const notePixels = pixels
+    .map((p) => `<rect x="${n(p.x + (PITCH - side) / 2)}" y="${n(p.y + (PITCH - side) / 2)}" width="${n(side)}" height="${n(side)}"/>`)
+    .join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${s} ${s}">
+  <clipPath id="c"><rect width="${s}" height="${s}" rx="14"/></clipPath>
+  <g clip-path="url(#c)">
+    <rect width="${s}" height="${s}" fill="${hex(CASING)}"/>
+    <rect y="${n(BAND.top)}" width="${s}" height="${n(BAND.bottom - BAND.top)}" fill="${hex(SCREEN)}"/>
+    <g fill="${hex(GREEN)}">${barMarks}</g>
+    <g fill="${hex(WHITE)}">${notePixels}</g>
+  </g>
+</svg>
+`;
 }
 
 function encodePng(size, rgba) {

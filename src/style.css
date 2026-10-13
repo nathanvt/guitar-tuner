@@ -144,6 +144,16 @@ p {
   transform: translateY(var(--shift, 0px)) scale(var(--fit, 1));
 }
 
+/* Once a note has held in tune, a faint green light falls from the top of the screen. */
+.confirm {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 50%;
+  background: linear-gradient(rgb(46 226 122 / 0.2), rgb(46 226 122 / 0.05) 50%, transparent);
+  opacity: var(--lock, 0);
+  pointer-events: none;
+}
+
 .device:is([data-power='off'], [data-power='error']) .reading {
   cursor: pointer;
 }

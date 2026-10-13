@@ -6,6 +6,7 @@ import type { Note } from './pitch.ts';
     - Bars rest grey. The bar at the current pitch lights red and grows longer, so
       both color and size carry the reading. In tune, the whole arc lights green.
     - Between two bars, the light splits across both, so the reading glides.
+    - Once a note has held in tune (`lock`), the green bars glow a little brighter.
     - Nothing is drawn where nothing is lit.
     - The note letter sits dead center, under the center bar, and never moves; the
       sharp and octave hang off its right side.
@@ -18,6 +19,8 @@ const SWEEP = (60 * Math.PI) / 180;
 /** How much longer a fully lit bar grows; the center bar is the target and always longer. */
 const GROW = 0.4;
 const CENTER = 1.25;
+/** Extra glow on the bars at full lock, added to the glow layer only. */
+const LOCK_GLOW = 0.8;
 /** Height of the whole composition, arc to note, in radii. */
 const COMPOSITION = 2.26;
 
@@ -39,6 +42,8 @@ export interface Frame {
   tuned: boolean;
   /** 0..1, from the brightness dial. */
   brightness: number;
+  /** 0..1, how settled the in-tune confirmation is. */
+  lock: number;
 }
 
 interface Layout {
@@ -110,6 +115,7 @@ export class Reading {
     // While starting, a light runs along the arc.
     const head = ((f.time / 900) % 1) * (2 * HALF + 6) - HALF - 3;
     const on = f.mode === 'sweep' ? SWEEP_LIGHT : f.tuned ? GREEN : RED;
+    const boost = f.mode === 'live' && f.tuned ? f.lock * LOCK_GLOW * f.brightness : 0;
 
     for (let i = -HALF; i <= HALF; i++) {
       // `glow` is how much of the lit color a bar takes; `grow` how much longer it gets.
@@ -124,7 +130,10 @@ export class Reading {
       }
       const length = L.bar * (i === 0 ? CENTER : 1) * (1 + GROW * grow);
       const width = L.barWidth * (i === 0 ? 1.2 : 1);
-      this.bar(L, (i / HALF) * SWEEP, length, width, rgb(mix(IDLE, on, glow), f.brightness));
+      const angle = (i / HALF) * SWEEP;
+      this.bar(this.ctx, L, angle, length, width, rgb(mix(IDLE, on, glow), f.brightness));
+      // Drawn into the glow layer only, so just the halo grows.
+      if (boost > 0) this.bar(this.bloom, L, angle, length, width, rgb(GREEN, boost));
     }
   }
 
@@ -138,8 +147,7 @@ export class Reading {
   }
 
   /** One LED bar, standing on the arc and pointing out from its center. */
-  private bar(L: Layout, angle: number, length: number, width: number, color: string) {
-    const { ctx } = this;
+  private bar(ctx: CanvasRenderingContext2D, L: Layout, angle: number, length: number, width: number, color: string) {
     const inner = L.radius - L.bar / 2;
     ctx.save();
     ctx.translate(L.cx, L.cy);
