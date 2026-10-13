@@ -31,3 +31,18 @@ const BLANK = Array<string>(GLYPH_HEIGHT).fill('.'.repeat(GLYPH_WIDTH));
 export function glyph(char: string): string[] {
   return GLYPHS[char] ?? BLANK;
 }
+
+/** A warning triangle with an exclamation cut out of it, for error messages. */
+export const WARNING = [
+  '......#......',
+  '.....###.....',
+  '.....#.#.....',
+  '....##.##....',
+  '....##.##....',
+  '...###.###...',
+  '...#######...',
+  '..####.####..',
+  '..#########..',
+  '.###########.',
+  '#############',
+];

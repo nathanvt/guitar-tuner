@@ -28,6 +28,8 @@
   --print-strong: #b9bdc3;
   --red: #ff3b2f;
   --green: #2ee27a;
+  --green-dark: #1d4630;
+  --orange: #ff8a1f;
 
   font-family: 'Unbounded Variable', -apple-system, BlinkMacSystemFont, sans-serif;
   -webkit-text-size-adjust: 100%;
@@ -43,7 +45,15 @@ body {
   margin: 0;
   overflow: hidden;
   overscroll-behavior: none;
-  background: var(--space);
+}
+
+/*
+  Dark above the middle, panel grey below it. In Safari the page ends above the
+  floating toolbar, and whatever shows beneath it should match the panel, not the
+  reading area.
+*/
+html {
+  background: var(--panel) linear-gradient(var(--space), var(--space)) no-repeat top / 100% 50%;
 }
 
 body {
@@ -152,6 +162,23 @@ p {
 
 [data-power='off'] .message-title {
   color: var(--print);
+}
+
+[data-power='error'] .message-title {
+  color: var(--orange);
+}
+
+.message-icon {
+  display: none;
+  width: 39px;
+  height: 33px;
+  margin-bottom: 6px;
+  fill: var(--orange);
+  shape-rendering: crispEdges;
+}
+
+[data-power='error'] .message-icon {
+  display: block;
 }
 
 .message-detail {
@@ -312,34 +339,60 @@ p {
   padding: 0;
 }
 
-/* Pilot light: red while off, green while on. */
+/* Pilot light: an unlit dark green while off, lit green while on. */
 .pilot {
-  --c: var(--red);
   width: 12px;
   height: 5px;
   border-radius: 1.5px;
-  background: var(--c);
-  box-shadow: 0 0 var(--led-glow) color-mix(in srgb, var(--c) 70%, transparent);
+  background: var(--green-dark);
 }
 
 :is([data-power='on'], [data-power='starting']) .pilot {
-  --c: var(--green);
+  background: var(--green);
+  box-shadow: 0 0 var(--led-glow) rgb(46 226 122 / 0.7);
 }
 
 [data-power='starting'] .pilot {
   animation: blink 700ms steps(1) infinite;
 }
 
-/* The mic was refused: the key pops up and the pilot flashes. */
+/* The mic was refused: the key pops up and the pilot flashes orange. */
 [data-power='error'] .pilot {
-  animation: blink 500ms steps(1) 3;
+  animation: refused 500ms steps(1) 3;
 }
 
 @keyframes blink {
   50% {
-    background: color-mix(in srgb, var(--c) 30%, #000);
+    background: var(--green-dark);
     box-shadow: none;
   }
+}
+
+@keyframes refused {
+  0% {
+    background: var(--orange);
+    box-shadow: 0 0 var(--led-glow) rgb(255 138 31 / 0.7);
+  }
+  50% {
+    background: var(--green-dark);
+    box-shadow: none;
+  }
+}
+
+/* Beside the glow keys: a light that shows the current glow strength. */
+.glow-led {
+  width: 8px;
+  height: 8px;
+  margin-right: 8px;
+  border-radius: 1.5px;
+  background: var(--green);
+  box-shadow: 0 0 calc(var(--bloom-blur) * 1.6) rgb(46 226 122 / calc(var(--bloom) * 1.6));
+  transition: box-shadow 160ms;
+}
+
+.label:has(.glow-led) {
+  display: inline-flex;
+  align-items: center;
 }
 
 /* ---------- Dial ---------- */

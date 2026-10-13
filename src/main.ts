@@ -3,6 +3,7 @@ import { PitchTracker, WINDOW, noteFromFrequency, type Note } from './pitch.ts';
 import { Reading } from './reading.ts';
 import { Grille } from './grille.ts';
 import { Dial } from './dial.ts';
+import { WARNING } from './pixelfont.ts';
 
 type Power = 'off' | 'starting' | 'on' | 'error';
 type Glow = 'off' | 'low' | 'hi';
@@ -46,6 +47,7 @@ const ui = {
 };
 
 const reading = new Reading(el('.lights'), el('.bloom'));
+drawPixels(el('.message-icon'), WARNING);
 const grille = new Grille(ui.grille);
 const settings = loadSettings();
 
@@ -332,6 +334,17 @@ function saveSettings() {
   } catch {
     // Private mode or storage blocked: settings last for this session only.
   }
+}
+
+/** Solid square pixels into an SVG, one unit each, so the icon stays crisp at any size. */
+function drawPixels(svg: SVGSVGElement, rows: string[]) {
+  svg.setAttribute('viewBox', `0 0 ${rows[0].length} ${rows.length}`);
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path.setAttribute(
+    'd',
+    rows.flatMap((row, y) => [...row].map((dot, x) => (dot === '#' ? `M${x} ${y}h1v1h-1z` : ''))).join(''),
+  );
+  svg.append(path);
 }
 
 /** Input loudness, 0..1. */
