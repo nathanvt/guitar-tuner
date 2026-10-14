@@ -2,7 +2,8 @@ import { GLYPH_HEIGHT, GLYPH_WIDTH, glyph } from './pixelfont.ts';
 import type { Note } from './pitch.ts';
 
 /*
-  The reading, on open space: an arc of LED bars above a white pixel note.
+  The reading, on open space: an arc of LED bars above a pixel note. Colors come from
+  the palette: the theme sets the resting tones, the color preset the good/bad pair.
     - Bars rest grey. The bar at the current pitch lights and grows longer, so both
       color and size carry the reading; its neighbors take a dim version of its
       color. It is red when off pitch and green when close (the bars either side of
@@ -20,9 +21,7 @@ import type { Note } from './pitch.ts';
 const HALF = 8;
 /** The arc spans ±60° from straight up, leaving room for the note's side column below its ends. */
 const SWEEP = (60 * Math.PI) / 180;
-/** Spot on: the center bar, ±2¢. */
-export const SPOT_ON_CENTS = 2;
-/** Close: the bars either side of center, out to ±5¢. */
+/** Close: the bars either side of center, out to ±5¢. Spot on, the center bar, is set by the tolerance. */
 export const CLOSE_CENTS = 5;
 /** Beyond close, the outer bars cover the rest of ±50¢, finer toward the middle. */
 const OUTER_CURVE = 0.75;
@@ -40,13 +39,8 @@ const GLOW_STAGGER = 0.5;
 /** Height of the whole composition, arc to note, in radii. */
 const COMPOSITION = 2.26;
 
-const IDLE = [63, 67, 74];
-const RED = [255, 59, 47];
-const GREEN = [46, 226, 122];
 // While the mic starts, waves of light radiate out from the center bar: each bar
-// pulses dark to light, the ends a little after the center.
-const LOADING_DARK = [37, 40, 45];
-const LOADING_LIGHT = [210, 212, 208];
+// pulses from `rest` to `peak`, the ends a little after the center.
 const RIPPLE_MS = 1300;
 /** How far behind the center the end bars pulse, as a fraction of a ripple. */
 const RIPPLE_LAG = 0.45;
@@ -54,7 +48,28 @@ const RIPPLE_LAG = 0.45;
 // show the tuner is still awake. It fades in as the last note fades out.
 const IDLE_RIPPLE_MS = 2600;
 const IDLE_RIPPLE_DEPTH = 0.3;
-const WHITE = [244, 243, 238];
+
+export interface Palette {
+  /** Resting bars. */
+  idle: number[];
+  note: number[];
+  /** Close and spot on. */
+  good: number[];
+  /** Off pitch. */
+  bad: number[];
+  /** The loading ripple runs from `rest` to `peak`; the idle ripple lifts bars toward `peak`. */
+  rest: number[];
+  peak: number[];
+}
+
+const DEFAULT_PALETTE: Palette = {
+  idle: [63, 67, 74],
+  note: [244, 243, 238],
+  good: [46, 226, 122],
+  bad: [255, 59, 47],
+  rest: [37, 40, 45],
+  peak: [210, 212, 208],
+};
 
 export interface Frame {
   /** dark: off, nothing shown. idle: grey bars only. loading: starting up. live: listening. */
@@ -67,9 +82,11 @@ export interface Frame {
   strength: number;
   /** Spot on: the whole arc lights green. */
   tuned: boolean;
+  /** Width of spot on, in cents either side of pitch: the center bar's span. */
+  spot: number;
   /** Close: the reading lights green, without the whole arc. True whenever `tuned` is. */
   close: boolean;
-  /** 0..1, from the brightness dial. */
+  /** 0..1, from the contrast dial. */
   brightness: number;
   /** 0..1, how settled the in-tune confirmation is. */
   lock: number;
@@ -98,10 +115,15 @@ export class Reading {
   private height = 0;
   private ratio = 1;
   private layout: Layout | null = null;
+  private palette = DEFAULT_PALETTE;
 
   constructor(canvas: HTMLCanvasElement, bloom: HTMLCanvasElement) {
     this.ctx = canvas.getContext('2d')!;
     this.bloom = bloom.getContext('2d')!;
+  }
+
+  setPalette(palette: Palette) {
+    this.palette = palette;
   }
 
   /** Height of the arc and note together, in CSS pixels. */
@@ -141,11 +163,12 @@ export class Reading {
 
   private gauge(L: Layout, f: Frame) {
     // Spot on holds the reading on the center bar; close keeps it inside the center three.
-    const exact = barFor(f.cents);
+    const P = this.palette;
+    const exact = barFor(f.cents, f.spot);
     const position = f.tuned ? 0 : f.close ? Math.max(-1, Math.min(1, exact)) : exact;
     const loading = f.mode === 'loading';
-    const off = loading ? LOADING_DARK : IDLE;
-    const on = loading ? LOADING_LIGHT : f.close ? GREEN : RED;
+    const off = loading ? P.rest : P.idle;
+    const on = loading ? P.peak : f.close ? P.good : P.bad;
     // The confirmation only ever shows in green; leaving for red drops it at once.
     const lock = f.mode === 'live' && f.close ? f.lock : 0;
 
@@ -171,13 +194,13 @@ export class Reading {
       const length = L.bar * (i === 0 ? CENTER : 1) * (1 + GROW * grow);
       const width = L.barWidth * (i === 0 ? 1.2 : 1);
       const angle = (i / HALF) * SWEEP;
-      const color = mix(mix(off, LOADING_LIGHT, rest), on, glow);
+      const color = mix(mix(off, P.peak, rest), on, glow);
       this.bar(this.ctx, L, angle, length, width, rgb(color, f.brightness));
       // The five center bars glow brighter, center first. Drawn into the glow layer
       // only, so just the halo grows.
       if (lock > 0 && Math.abs(i) <= LOCK_GLOW_BARS) {
         const boost = staggered(lock, (Math.abs(i) / LOCK_GLOW_BARS) * GLOW_STAGGER) * LOCK_GLOW * f.brightness;
-        if (boost > 0) this.bar(this.bloom, L, angle, length, width, rgb(GREEN, boost));
+        if (boost > 0) this.bar(this.bloom, L, angle, length, width, rgb(P.good, boost));
       }
     }
   }
@@ -186,9 +209,9 @@ export class Reading {
     if (!f.note || f.strength < 0.01) return;
     const alpha = f.strength * f.brightness;
     const { name, octave } = f.note;
-    this.glyph(name.slice(0, 1), L.noteX, L.noteY, L.pitch, rgb(WHITE, alpha));
-    this.glyph(name.slice(1), L.sideX, L.noteY, L.small, rgb(WHITE, alpha));
-    this.glyph(String(octave), L.sideX, L.noteY + GLYPH_HEIGHT * (L.pitch - L.small), L.small, rgb(WHITE, alpha * 0.5));
+    this.glyph(name.slice(0, 1), L.noteX, L.noteY, L.pitch, rgb(this.palette.note, alpha));
+    this.glyph(name.slice(1), L.sideX, L.noteY, L.small, rgb(this.palette.note, alpha));
+    this.glyph(String(octave), L.sideX, L.noteY + GLYPH_HEIGHT * (L.pitch - L.small), L.small, rgb(this.palette.note, alpha * 0.5));
   }
 
   /** One LED bar, standing on the arc and pointing out from its center. */
@@ -223,13 +246,13 @@ export class Reading {
 
 /**
  * Bar position for a distance from pitch, in bars from center (signed). The center
- * bar covers ±2¢, the next ones reach ±5¢, and the outer six cover the rest.
+ * bar covers ±`spot`¢, the next ones reach ±5¢, and the outer six cover the rest.
  */
-function barFor(cents: number): number {
+function barFor(cents: number, spot: number): number {
   const c = Math.min(50, Math.abs(cents));
   let bar: number;
-  if (c <= SPOT_ON_CENTS) bar = (c / SPOT_ON_CENTS) * 0.5;
-  else if (c <= CLOSE_CENTS) bar = 0.5 + (c - SPOT_ON_CENTS) / (CLOSE_CENTS - SPOT_ON_CENTS);
+  if (c <= spot) bar = (c / spot) * 0.5;
+  else if (c <= CLOSE_CENTS) bar = 0.5 + (c - spot) / (CLOSE_CENTS - spot);
   else bar = 1.5 + (HALF - 1.5) * ((c - CLOSE_CENTS) / (50 - CLOSE_CENTS)) ** OUTER_CURVE;
   return Math.sign(cents) * bar;
 }

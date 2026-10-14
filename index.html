@@ -24,23 +24,94 @@
       <!-- The screen is a lid: it lifts to uncover the controls tray beneath it. -->
       <div class="stage">
         <section class="dashboard" id="dashboard" aria-label="Controls" inert>
-          <h2 class="dashboard-title label">controls</h2>
-          <div class="settings">
-            <div class="setting">
-              <div class="dial" data-dial="brightness" role="slider" tabindex="0" aria-label="Brightness" aria-valuemin="0" aria-valuemax="100">
+          <div class="dashboard-head">
+            <h2 class="dashboard-title label">controls</h2>
+            <span class="well tabs" role="tablist" aria-label="Control pages">
+              <button class="key key-tab" type="button" role="tab" aria-selected="true" data-page-key="display"><span class="legend">display</span></button>
+              <button class="key key-tab" type="button" role="tab" aria-selected="false" data-page-key="tuning"><span class="legend">tuning</span></button>
+            </span>
+          </div>
+          <div class="pages">
+          <div class="page" data-page="display" role="tabpanel" aria-label="Display">
+            <div class="cell cell-dial">
+              <div class="dial" data-dial="contrast" role="slider" tabindex="0" aria-label="Contrast" aria-valuemin="0" aria-valuemax="100">
                 <svg class="dial-scale" viewBox="-64 -64 128 128" aria-hidden="true"></svg>
                 <span class="knob"><span class="pointer"><span></span></span></span>
               </div>
-              <span class="label">brightness</span>
+              <span class="label">contrast</span>
             </div>
-            <div class="setting">
-              <span class="well bank" role="radiogroup" aria-label="Glow">
-                <button class="key key-small" type="button" role="radio" aria-checked="false" data-glow="off"><span class="legend">off</span></button>
-                <button class="key key-small" type="button" role="radio" aria-checked="false" data-glow="low"><span class="legend">low</span></button>
-                <button class="key key-small" type="button" role="radio" aria-checked="false" data-glow="hi"><span class="legend">hi</span></button>
+            <div class="cell">
+              <span class="label">colors</span>
+              <span class="well bank" role="radiogroup" aria-label="Colors" data-setting="colors">
+                <button class="key key-mini" type="button" role="radio" aria-checked="false" data-value="green-red" aria-label="Green and red"><span class="swatches"><i></i><i></i></span></button>
+                <button class="key key-mini" type="button" role="radio" aria-checked="false" data-value="teal-magenta" aria-label="Teal and magenta"><span class="swatches"><i></i><i></i></span></button>
+                <button class="key key-mini" type="button" role="radio" aria-checked="false" data-value="blue-orange" aria-label="Blue and orange"><span class="swatches"><i></i><i></i></span></button>
               </span>
-              <span class="label"><i class="glow-led"></i>glow</span>
             </div>
+            <div class="cell">
+              <span class="label">theme</span>
+              <span class="well bank" role="radiogroup" aria-label="Theme" data-setting="theme">
+                <button class="key key-mini" type="button" role="radio" aria-checked="false" data-value="dark"><span class="legend">dark</span></button>
+                <button class="key key-mini" type="button" role="radio" aria-checked="false" data-value="light"><span class="legend">light</span></button>
+              </span>
+            </div>
+            <div class="cell">
+              <span class="label"><i class="glow-led"></i>glow</span>
+              <span class="well bank" role="radiogroup" aria-label="Glow" data-setting="glow">
+                <button class="key key-mini" type="button" role="radio" aria-checked="false" data-value="off"><span class="legend">off</span></button>
+                <button class="key key-mini" type="button" role="radio" aria-checked="false" data-value="low"><span class="legend">low</span></button>
+                <button class="key key-mini" type="button" role="radio" aria-checked="false" data-value="hi"><span class="legend">hi</span></button>
+              </span>
+            </div>
+            <div class="cell">
+              <span class="label">gradient</span>
+              <span class="well bank" role="radiogroup" aria-label="Gradient" data-setting="gradient">
+                <button class="key key-mini" type="button" role="radio" aria-checked="false" data-value="on"><span class="legend">on</span></button>
+                <button class="key key-mini" type="button" role="radio" aria-checked="false" data-value="off"><span class="legend">off</span></button>
+              </span>
+            </div>
+          </div>
+          <div class="page" data-page="tuning" role="tabpanel" aria-label="Tuning">
+            <div class="cell cell-dial">
+              <div class="dial" data-dial="sensitivity" role="slider" tabindex="0" aria-label="Mic sensitivity" aria-valuemin="0" aria-valuemax="100">
+                <svg class="dial-scale" viewBox="-64 -64 128 128" aria-hidden="true"></svg>
+                <span class="knob"><span class="pointer"><span></span></span></span>
+              </div>
+              <span class="label">mic sensitivity</span>
+            </div>
+            <div class="cell">
+              <span class="label">tolerance</span>
+              <span class="well bank" role="radiogroup" aria-label="Tolerance" data-setting="tolerance">
+                <button class="key key-mini" type="button" role="radio" aria-checked="false" data-value="tight"><span class="legend">tight</span></button>
+                <button class="key key-mini" type="button" role="radio" aria-checked="false" data-value="mid"><span class="legend">mid</span></button>
+                <button class="key key-mini" type="button" role="radio" aria-checked="false" data-value="loose"><span class="legend">loose</span></button>
+              </span>
+            </div>
+            <div class="cell">
+              <span class="label">response</span>
+              <span class="well bank" role="radiogroup" aria-label="Response" data-setting="response">
+                <button class="key key-mini" type="button" role="radio" aria-checked="false" data-value="calm"><span class="legend">calm</span></button>
+                <button class="key key-mini" type="button" role="radio" aria-checked="false" data-value="mid"><span class="legend">mid</span></button>
+                <button class="key key-mini" type="button" role="radio" aria-checked="false" data-value="quick"><span class="legend">quick</span></button>
+              </span>
+            </div>
+            <div class="cell">
+              <span class="label">settle</span>
+              <span class="well bank" role="radiogroup" aria-label="Settle" data-setting="settle">
+                <button class="key key-mini" type="button" role="radio" aria-checked="false" data-value="short"><span class="legend">short</span></button>
+                <button class="key key-mini" type="button" role="radio" aria-checked="false" data-value="mid"><span class="legend">mid</span></button>
+                <button class="key key-mini" type="button" role="radio" aria-checked="false" data-value="long"><span class="legend">long</span></button>
+              </span>
+            </div>
+            <div class="cell">
+              <span class="label">auto-off</span>
+              <span class="well bank" role="radiogroup" aria-label="Auto-off" data-setting="autoOff">
+                <button class="key key-mini" type="button" role="radio" aria-checked="false" data-value="off"><span class="legend">off</span></button>
+                <button class="key key-mini" type="button" role="radio" aria-checked="false" data-value="2"><span class="legend">2m</span></button>
+                <button class="key key-mini" type="button" role="radio" aria-checked="false" data-value="5"><span class="legend">5m</span></button>
+              </span>
+            </div>
+          </div>
           </div>
         </section>
 

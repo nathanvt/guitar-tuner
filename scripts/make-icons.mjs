@@ -1,5 +1,5 @@
-// Draws the app icons and favicon to match the tuner: casing grey, a dark screen band,
-// the arc of bars lit green as when in tune, and a white pixel E.
+// Draws the app icons and favicon to match the tuner: black with a soft neutral light at
+// its center, the arc of bars lit green and glowing as when in tune, and a white pixel E.
 // No image libraries: shapes are signed-distance fields, PNG is encoded by hand.
 // Run: npm run icons
 import { deflateSync } from 'node:zlib';
@@ -7,17 +7,19 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 
 const OUT = new URL('../public/', import.meta.url);
 
-const CASING = [27, 28, 31];
-const SCREEN = [14, 15, 17];
+// A slight radial light gives the black some body.
+const LIGHT = [30, 31, 35];
+const BLACK = [5, 5, 6];
+const LIGHT_CENTER = [0.5, 0.45];
+const LIGHT_RADIUS = 0.75;
 const GREEN = [46, 226, 122];
 const WHITE = [244, 243, 238];
 
 // Geometry in a 0..1 square. Every mark sits inside the maskable safe circle (radius 0.4).
-const BAND = { top: 0.18, bottom: 0.82 };
-const ARC = { cx: 0.5, cy: 0.6, radius: 0.28, half: 4, sweep: (60 * Math.PI) / 180, length: 0.075, width: 0.04 };
+const ARC = { cx: 0.5, cy: 0.62, radius: 0.34, half: 4, sweep: (60 * Math.PI) / 180, length: 0.09, width: 0.05 };
 const CENTER_LENGTH = 1.3;
 const E = ['#####', '#....', '#....', '####.', '#....', '#....', '#####'];
-const PITCH = 0.036;
+const PITCH = 0.046;
 const NOTE = { x: 0.5 - (5 * PITCH) / 2, y: 0.5 };
 
 const bars = [];
@@ -46,12 +48,12 @@ function draw(size) {
     for (let x = 0; x < size; x++) {
       const u = (x + 0.5) / size;
       const v = (y + 0.5) / size;
-      const onScreen = v >= BAND.top && v <= BAND.bottom;
-      let color = onScreen ? SCREEN : CASING;
+      const light = Math.min(1, Math.hypot(u - LIGHT_CENTER[0], v - LIGHT_CENTER[1]) / LIGHT_RADIUS);
+      let color = mix(LIGHT, BLACK, light * light);
 
       const bar = Math.min(...bars.map((b) => barDistance(u, v, b)));
-      // Soft green light around the bars, on the screen only.
-      if (onScreen) color = mix(color, GREEN, 0.3 * Math.exp(-Math.max(bar, 0) / 0.03));
+      // Soft green light around the bars.
+      color = mix(color, GREEN, 0.32 * Math.exp(-Math.max(bar, 0) / 0.035));
       color = mix(color, GREEN, coverage(bar, size));
 
       const note = Math.min(...pixels.map((p) => pixelDistance(u, v, p)));
@@ -115,13 +117,19 @@ function favicon() {
     .map((p) => `<rect x="${n(p.x + (PITCH - side) / 2)}" y="${n(p.y + (PITCH - side) / 2)}" width="${n(side)}" height="${n(side)}"/>`)
     .join('');
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${s} ${s}">
-  <clipPath id="c"><rect width="${s}" height="${s}" rx="14"/></clipPath>
-  <g clip-path="url(#c)">
-    <rect width="${s}" height="${s}" fill="${hex(CASING)}"/>
-    <rect y="${n(BAND.top)}" width="${s}" height="${n(BAND.bottom - BAND.top)}" fill="${hex(SCREEN)}"/>
-    <g fill="${hex(GREEN)}">${barMarks}</g>
-    <g fill="${hex(WHITE)}">${notePixels}</g>
+  <defs>
+    <radialGradient id="light" cx="${LIGHT_CENTER[0]}" cy="${LIGHT_CENTER[1]}" r="${LIGHT_RADIUS}">
+      <stop offset="0" stop-color="${hex(LIGHT)}"/>
+      <stop offset="1" stop-color="${hex(BLACK)}"/>
+    </radialGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="1.6"/></filter>
+  </defs>
+  <rect width="${s}" height="${s}" rx="14" fill="url(#light)"/>
+  <g fill="${hex(GREEN)}">
+    <g filter="url(#glow)" opacity="0.6">${barMarks}</g>
+    ${barMarks}
   </g>
+  <g fill="${hex(WHITE)}">${notePixels}</g>
 </svg>
 `;
 }

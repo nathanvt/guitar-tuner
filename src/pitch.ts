@@ -11,6 +11,7 @@ const MIN_HZ = 60;
 const MAX_HZ = 1400;
 // McLeod clarity: 1 is a pure periodic tone, noise sits well below 0.8.
 const MIN_CLARITY = 0.9;
+/** Default noise gate: quieter input than this is ignored. */
 const MIN_VOLUME_DB = -50;
 // Median over this many readings throws out one-frame octave slips.
 const HISTORY = 5;
@@ -49,6 +50,11 @@ export class PitchTracker {
   constructor(sampleRate: number) {
     this.sampleRate = sampleRate;
     this.detector.minVolumeDecibels = MIN_VOLUME_DB;
+  }
+
+  /** Moves the noise gate: lower (more negative) hears quieter strings, and more room noise. */
+  setMinVolume(decibels: number) {
+    this.detector.minVolumeDecibels = decibels;
   }
 
   /** Returns the current pitch in Hz, or null when nothing clear is playing. */

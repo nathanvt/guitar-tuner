@@ -1,12 +1,97 @@
 import './style.css';
 import { PitchTracker, WINDOW, noteFromFrequency, type Note } from './pitch.ts';
-import { CLOSE_CENTS, Reading, SPOT_ON_CENTS } from './reading.ts';
+import { CLOSE_CENTS, Reading, type Palette } from './reading.ts';
 import { Grille } from './grille.ts';
 import { Dial } from './dial.ts';
 import { WARNING } from './pixelfont.ts';
 
 type Power = 'off' | 'starting' | 'on' | 'error';
-type Glow = 'off' | 'low' | 'hi';
+
+// ---------- Settings ----------
+
+/**
+ * Every interlocking key bank in the controls tray. In the markup, a bank names its
+ * setting in data-setting and each key its value in data-value.
+ */
+const CHOICES = {
+  colors: ['green-red', 'teal-magenta', 'blue-orange'],
+  theme: ['dark', 'light'],
+  glow: ['off', 'low', 'hi'],
+  gradient: ['on', 'off'],
+  tolerance: ['tight', 'mid', 'loose'],
+  response: ['calm', 'mid', 'quick'],
+  settle: ['short', 'mid', 'long'],
+  autoOff: ['off', '2', '5'],
+} as const;
+type Choice = keyof typeof CHOICES;
+type Settings = { [K in Choice]: (typeof CHOICES)[K][number] } & {
+  /** Contrast dial step, -5..+5. */
+  contrast: number;
+  /** Mic sensitivity dial step, 0..10. */
+  sensitivity: number;
+};
+
+const DEFAULTS: Settings = {
+  colors: 'green-red',
+  theme: 'dark',
+  glow: 'low',
+  gradient: 'on',
+  tolerance: 'mid',
+  response: 'mid',
+  settle: 'mid',
+  autoOff: 'off',
+  contrast: 0,
+  sensitivity: 5,
+};
+const SETTINGS_KEY = 'tuner.settings';
+
+/** Spot on, in cents either side of pitch. */
+const TOLERANCE_CENTS = { tight: 1, mid: 2, loose: 3 };
+/** Time constant for the reading following pitch, in ms. */
+const RESPONSE_MS = { calm: 160, mid: 100, quick: 55 };
+/** How long a note must hold spot on before the display confirms it (its dwell time). */
+const SETTLE_MS = { short: 150, mid: 300, long: 600 };
+/** Silence before the tuner switches itself off. */
+const AUTO_OFF_MS = { off: Infinity, '2': 2 * 60_000, '5': 5 * 60_000 };
+const GLOW = {
+  off: { bloom: 0, blur: 0, led: 0 },
+  low: { bloom: 0.3, blur: 5, led: 6 },
+  hi: { bloom: 0.55, blur: 8, led: 11 },
+};
+
+/** Resting tones for each theme, and its deeper or brighter version of each color pair. */
+const THEMES = {
+  dark: {
+    themeColor: '#1b1c1f',
+    tones: { idle: [63, 67, 74], note: [244, 243, 238], rest: [37, 40, 45], peak: [210, 212, 208] },
+    grille: { bore: '#060708', lip: 'rgb(255 255 255 / 0.07)', lit: [244, 241, 232] },
+    pairs: {
+      'green-red': { good: [46, 226, 122], bad: [255, 59, 47] },
+      'teal-magenta': { good: [32, 214, 199], bad: [255, 64, 166] },
+      'blue-orange': { good: [64, 144, 255], bad: [255, 140, 26] },
+    },
+  },
+  light: {
+    themeColor: '#e2dbcb',
+    tones: { idle: [204, 196, 179], note: [28, 27, 24], rest: [214, 207, 192], peak: [86, 81, 71] },
+    grille: { bore: '#8f8672', lip: 'rgb(255 255 255 / 0.45)', lit: [28, 27, 24] },
+    pairs: {
+      'green-red': { good: [18, 152, 74], bad: [212, 42, 30] },
+      'teal-magenta': { good: [8, 150, 140], bad: [200, 30, 122] },
+      'blue-orange': { good: [26, 104, 216], bad: [214, 102, 0] },
+    },
+  },
+};
+
+// Contrast dial: 0 (straight up) is the default; -5 dims the reading to 20%, +5 is full.
+const CONTRAST_STEPS = 5;
+const CONTRAST_HOME = 0.75;
+const CONTRAST_MIN = 0.2;
+// Mic sensitivity dial, 0..10: each step moves the noise gate 3dB; 5 is -50dB.
+const SENSITIVITY_STEPS = 10;
+const gateFor = (sensitivity: number) => -35 - 3 * sensitivity;
+
+// ---------- Timing ----------
 
 // A reading counts as live for this long after the detector last heard the note,
 // so brief gaps in detection don't dim it.
@@ -21,35 +106,24 @@ const SOUND_LEVEL = 0.25;
 // Each green state is entered inside its band and left 1¢ outside it, so the
 // colors don't flicker at the edges.
 const HYSTERESIS_CENTS = 1;
-// How long a note must hold in tune before the display confirms it, and how
-// quickly the confirmation eases in and out.
-const LOCK_AFTER_MS = 300;
+// How quickly the confirmation eases in and out, and the reading fades in and out.
 const LOCK_IN_MS = 180;
 const LOCK_OUT_MS = 500;
-// Easing time constants, in ms: the reading follows pitch at a calm pace, fades in
-// fast and out slowly. Time-based, so 60 Hz and 120 Hz screens move alike.
-const FOLLOW_MS = 100;
 const FADE_IN_MS = 40;
 const FADE_OUT_MS = 200;
-
-const GLOW: Record<Glow, { bloom: number; blur: number; led: number }> = {
-  off: { bloom: 0, blur: 0, led: 0 },
-  low: { bloom: 0.3, blur: 5, led: 6 },
-  hi: { bloom: 0.55, blur: 8, led: 11 },
-};
-// Brightness dial: 0 (straight up) is the default; −5 dims to 20%, +5 is full.
-const BRIGHTNESS_STEPS = 5;
-const BRIGHTNESS_HOME = 0.75;
-const BRIGHTNESS_MIN = 0.2;
-const SETTINGS_KEY = 'tuner.settings';
 // Shown while adjusting the controls with the tuner off, so the effect is visible.
 const PREVIEW_NOTE = noteFromFrequency(440);
 // If a lifted finger never produces a click (it slid off the key), the key comes back up.
 const RELEASE_FALLBACK_MS = 400;
 
+// ---------- Elements ----------
+
 const el = <T extends Element>(selector: string) => document.querySelector<T>(selector)!;
+const all = <T extends Element>(selector: string) => [...document.querySelectorAll<T>(selector)];
 
 const ui = {
+  root: document.documentElement,
+  themeColor: el<HTMLMetaElement>('meta[name="theme-color"]'),
   device: el<HTMLElement>('.device'),
   reading: el<HTMLElement>('.reading'),
   message: el<HTMLElement>('.message'),
@@ -59,13 +133,16 @@ const ui = {
   power: el<HTMLButtonElement>('.key-power'),
   controls: el<HTMLButtonElement>('.key-controls'),
   dashboard: el<HTMLElement>('.dashboard'),
-  glowKeys: [...document.querySelectorAll<HTMLButtonElement>('[data-glow]')],
+  tabs: all<HTMLButtonElement>('[data-page-key]'),
+  pages: all<HTMLElement>('[data-page]'),
 };
 
 const reading = new Reading(el('.lights'), el('.bloom'));
-drawPixels(el('.message-icon'), WARNING);
 const grille = new Grille(ui.grille);
+drawPixels(el('.message-icon'), WARNING);
 const settings = loadSettings();
+
+// ---------- State ----------
 
 let power: Power = 'off';
 let panelOpen = false;
@@ -75,6 +152,7 @@ let wakeLock: WakeLockSentinel | null = null;
 let frameId = 0;
 // Bumped by every start and stop, so a start that resumes after a stop knows it's stale.
 let session = 0;
+let startedAt = 0;
 
 const samples = new Float32Array(WINDOW);
 let note: Note | null = null;
@@ -89,21 +167,43 @@ let lock = 0;
 let lockShown = '';
 let paintedAt = performance.now();
 
-const levelOf = (value: number) => Math.round(value * 2 * BRIGHTNESS_STEPS) - BRIGHTNESS_STEPS;
-new Dial(el('[data-dial="brightness"]'), {
+// ---------- Controls ----------
+
+const contrastOf = (value: number) => Math.round(value * 2 * CONTRAST_STEPS) - CONTRAST_STEPS;
+new Dial(el('[data-dial="contrast"]'), {
   scale: ['−5', '−4', '−3', '−2', '−1', '0', '+1', '+2', '+3', '+4', '+5'],
-  steps: 2 * BRIGHTNESS_STEPS,
-  value: (settings.brightness + BRIGHTNESS_STEPS) / (2 * BRIGHTNESS_STEPS),
+  steps: 2 * CONTRAST_STEPS,
+  value: (settings.contrast + CONTRAST_STEPS) / (2 * CONTRAST_STEPS),
   describe: (value) => {
-    const level = levelOf(value);
-    return level > 0 ? `+${level}` : String(level);
+    const step = contrastOf(value);
+    return step > 0 ? `+${step}` : String(step);
   },
   onChange: (value) => {
-    settings.brightness = levelOf(value);
+    settings.contrast = contrastOf(value);
     saveSettings();
     paint(performance.now());
   },
 });
+new Dial(el('[data-dial="sensitivity"]'), {
+  scale: ['0', '', '2', '', '4', '', '6', '', '8', '', '10'],
+  steps: SENSITIVITY_STEPS,
+  value: settings.sensitivity / SENSITIVITY_STEPS,
+  describe: (value) => `${Math.round(value * SENSITIVITY_STEPS)} of ${SENSITIVITY_STEPS}`,
+  onChange: (value) => {
+    settings.sensitivity = Math.round(value * SENSITIVITY_STEPS);
+    saveSettings();
+    audio?.tracker.setMinVolume(gateFor(settings.sensitivity));
+  },
+});
+
+// Interlocking keys: touching one latches it at once and releases the others.
+for (const bank of all<HTMLElement>('[data-setting]')) {
+  const setting = bank.dataset.setting as Choice;
+  for (const key of bank.querySelectorAll<HTMLButtonElement>('[data-value]')) {
+    latchOnTouch(key, () => choose(setting, key.dataset.value!));
+  }
+}
+for (const tab of ui.tabs) latchOnTouch(tab, () => showPage(tab.dataset.pageKey!));
 
 const resizer = new ResizeObserver((entries) => {
   for (const { target, contentRect } of entries) {
@@ -121,7 +221,8 @@ resizer.observe(ui.reading);
 resizer.observe(ui.grille);
 resizer.observe(ui.dashboard);
 
-setGlow(settings.glow);
+applySettings();
+showPage('display');
 setPower('off');
 
 pushKey(ui.power, () => (power === 'on' || power === 'starting' ? stop() : start()));
@@ -132,26 +233,6 @@ pushKey(ui.controls, () => {
   ui.dashboard.inert = !panelOpen;
   paint(performance.now());
 });
-
-// Interlocking keys: touching one latches it at once and releases the others.
-for (const key of ui.glowKeys) {
-  const choose = () => {
-    const glow = key.dataset.glow as Glow;
-    if (glow === settings.glow) return;
-    settings.glow = glow;
-    saveSettings();
-    setGlow(glow);
-    paint(performance.now());
-  };
-  key.addEventListener('pointerdown', () => {
-    key.classList.add('pressed');
-    choose();
-  });
-  for (const type of ['pointerup', 'pointercancel', 'pointerleave'] as const) {
-    key.addEventListener(type, () => key.classList.remove('pressed'));
-  }
-  key.addEventListener('click', choose); // keyboard
-}
 
 ui.reading.addEventListener('click', () => {
   if (power === 'off' || power === 'error') start();
@@ -191,6 +272,71 @@ function pushKey(key: HTMLButtonElement, action: () => void) {
   });
 }
 
+/** An interlocking key: it acts the moment it's touched, so it can latch straight away. */
+function latchOnTouch(key: HTMLButtonElement, action: () => void) {
+  key.addEventListener('pointerdown', () => {
+    key.classList.add('pressed');
+    action();
+  });
+  for (const type of ['pointerup', 'pointercancel', 'pointerleave'] as const) {
+    key.addEventListener(type, () => key.classList.remove('pressed'));
+  }
+  key.addEventListener('click', action); // keyboard
+}
+
+function choose(setting: Choice, value: string) {
+  if (settings[setting] === value) return;
+  (settings as Record<Choice, string>)[setting] = value;
+  saveSettings();
+  applySettings();
+  paint(performance.now());
+}
+
+/** Pushes every setting out to the display, the CSS and the keys that show it. */
+function applySettings() {
+  const theme = THEMES[settings.theme];
+  const pair = theme.pairs[settings.colors];
+  ui.root.dataset.theme = settings.theme;
+  ui.themeColor.content = theme.themeColor;
+  reading.setPalette({ ...theme.tones, ...pair } satisfies Palette);
+  grille.setColors(theme.grille);
+  ui.root.style.setProperty('--good-rgb', pair.good.join(' '));
+
+  const glow = GLOW[settings.glow];
+  ui.root.style.setProperty('--bloom', String(glow.bloom));
+  ui.root.style.setProperty('--bloom-blur', `${glow.blur}px`);
+  ui.root.style.setProperty('--led-glow', `${glow.led}px`);
+  // Light glowing around dark holes would read as a smudge on the cream casing.
+  grille.setGlow(settings.theme === 'dark' ? glow.led : 0);
+  ui.device.dataset.gradient = settings.gradient;
+
+  for (const bank of all<HTMLElement>('[data-setting]')) {
+    const current = settings[bank.dataset.setting as Choice];
+    for (const key of bank.querySelectorAll<HTMLElement>('[data-value]')) {
+      key.setAttribute('aria-checked', String(key.dataset.value === current));
+    }
+  }
+  // Color keys show their own pair, as this theme draws it, in two swatches.
+  for (const key of all<HTMLElement>('[data-setting="colors"] [data-value]')) {
+    const swatch = theme.pairs[key.dataset.value as Settings['colors']];
+    const [good, bad] = key.querySelectorAll<HTMLElement>('.swatches i');
+    good.style.background = `rgb(${swatch.good.join(' ')})`;
+    bad.style.background = `rgb(${swatch.bad.join(' ')})`;
+  }
+}
+
+/** Two pages share the tray; the hidden one keeps its space so the tray never resizes. */
+function showPage(page: string) {
+  for (const tab of ui.tabs) tab.setAttribute('aria-selected', String(tab.dataset.pageKey === page));
+  for (const panel of ui.pages) {
+    const shown = panel.dataset.page === page;
+    panel.classList.toggle('shown', shown);
+    panel.inert = !shown;
+  }
+}
+
+// ---------- Power ----------
+
 async function start() {
   if (power === 'on' || power === 'starting') return;
   const id = ++session;
@@ -229,7 +375,9 @@ async function start() {
   const analyser = ctx.createAnalyser();
   analyser.fftSize = WINDOW;
   ctx.createMediaStreamSource(stream).connect(analyser);
-  audio = { ctx, stream, analyser, tracker: new PitchTracker(ctx.sampleRate) };
+  const tracker = new PitchTracker(ctx.sampleRate);
+  tracker.setMinVolume(gateFor(settings.sensitivity));
+  audio = { ctx, stream, analyser, tracker };
 
   // Both checks ignore events from an earlier session that is still shutting down.
   stream.getAudioTracks()[0]?.addEventListener('ended', () => {
@@ -241,6 +389,7 @@ async function start() {
   });
 
   keepScreenAwake();
+  startedAt = performance.now();
   setPower('on');
 }
 
@@ -286,32 +435,12 @@ function setPower(next: Power) {
   paint(performance.now());
 }
 
-/**
- * How the screen lifts to uncover the controls tray: its bottom edge rises by the
- * tray's height, and the reading moves up by half that so it stays centered in what's
- * left, shrinking only if it wouldn't otherwise fit. CSS animates both as transforms,
- * so the reading is never redrawn mid-lift.
- */
-function fitLid() {
-  const tray = ui.dashboard.offsetHeight;
-  const visible = ui.reading.clientHeight - tray;
-  const fit = Math.min(1, (visible - 24) / (reading.compositionHeight || 1));
-  ui.device.style.setProperty('--tray', `${tray}px`);
-  ui.device.style.setProperty('--shift', `${-tray / 2}px`);
-  ui.device.style.setProperty('--fit', Math.max(0.4, fit).toFixed(3));
-}
-
-function setGlow(glow: Glow) {
-  const level = GLOW[glow];
-  ui.device.style.setProperty('--bloom', String(level.bloom));
-  ui.device.style.setProperty('--bloom-blur', `${level.blur}px`);
-  ui.device.style.setProperty('--led-glow', `${level.led}px`);
-  grille.setGlow(level.led);
-  for (const key of ui.glowKeys) key.setAttribute('aria-checked', String(key.dataset.glow === glow));
-}
+// ---------- Reading ----------
 
 function loop(now: number) {
   if (audio) {
+    // Auto-off: long enough without a note, the tuner switches itself off.
+    if (now - Math.max(heardAt, startedAt) > AUTO_OFF_MS[settings.autoOff]) return stop();
     audio.analyser.getFloatTimeDomainData(samples);
     loudness = inputLevel(samples);
     grille.draw(loudness);
@@ -330,13 +459,26 @@ function paint(now: number) {
   paintedAt = now;
   const ease = (ms: number) => 1 - Math.exp(-elapsed / ms);
 
-  const level = settings.brightness / BRIGHTNESS_STEPS; // -1..1
-  const brightness = BRIGHTNESS_HOME + level * (level < 0 ? BRIGHTNESS_HOME - BRIGHTNESS_MIN : 1 - BRIGHTNESS_HOME);
+  const step = settings.contrast / CONTRAST_STEPS; // -1..1
+  const brightness = CONTRAST_HOME + step * (step < 0 ? CONTRAST_HOME - CONTRAST_MIN : 1 - CONTRAST_HOME);
+  const spot = TOLERANCE_CENTS[settings.tolerance];
+
   const preview = panelOpen && (power === 'off' || power === 'error');
   ui.device.dataset.preview = String(preview);
   if (preview) {
     showLock(1);
-    reading.draw({ mode: 'live', time: now, note: PREVIEW_NOTE, cents: 0, strength: 1, tuned: true, close: true, brightness, lock: 1 });
+    reading.draw({
+      mode: 'live',
+      time: now,
+      note: PREVIEW_NOTE,
+      cents: 0,
+      strength: 1,
+      tuned: true,
+      close: true,
+      spot,
+      brightness,
+      lock: 1,
+    });
     return;
   }
 
@@ -347,18 +489,18 @@ function paint(now: number) {
 
   if ((live || held) && note) {
     // Jump straight to the first reading; glide after that.
-    cents = strength < 0.02 ? note.cents : cents + (note.cents - cents) * ease(FOLLOW_MS);
+    cents = strength < 0.02 ? note.cents : cents + (note.cents - cents) * ease(RESPONSE_MS[settings.response]);
     const off = Math.abs(note.cents);
     const was = tuned;
-    tuned = off < SPOT_ON_CENTS + (tuned ? HYSTERESIS_CENTS : 0);
+    tuned = off < spot + (tuned ? HYSTERESIS_CENTS : 0);
     close = tuned || off < CLOSE_CENTS + (close ? HYSTERESIS_CENTS : 0);
     if (tuned && !was) tunedAt = now;
   } else {
     tuned = false;
     close = false;
   }
-  // The confirmation only comes once the note has held in tune for a moment.
-  const locked = tuned && now - tunedAt >= LOCK_AFTER_MS;
+  // The confirmation only comes once the note has held spot on for the settle time.
+  const locked = tuned && now - tunedAt >= SETTLE_MS[settings.settle];
   if (power === 'on') {
     lock += ((locked ? 1 : 0) - lock) * ease(locked ? LOCK_IN_MS : LOCK_OUT_MS);
     if (lock < 0.005) lock = 0;
@@ -367,6 +509,7 @@ function paint(now: number) {
     lock = 0;
   }
   showLock(lock);
+
   const target = live ? 1 : held ? 0.5 : 0;
   strength += (target - strength) * ease(target > strength ? FADE_IN_MS : FADE_OUT_MS);
   if (strength < 0.005) strength = 0;
@@ -380,6 +523,7 @@ function paint(now: number) {
     strength,
     tuned,
     close,
+    spot,
     brightness,
     lock,
   });
@@ -393,20 +537,43 @@ function showLock(amount: number) {
   ui.device.style.setProperty('--lock', step);
 }
 
-/** `brightness` is a dial step, -5..+5. */
-function loadSettings(): { brightness: number; glow: Glow } {
-  const defaults = { brightness: 0, glow: 'low' as Glow };
+/**
+ * How the screen lifts to uncover the controls tray: its bottom edge rises by the
+ * tray's height, and the reading moves up by half that so it stays centered in what's
+ * left, shrinking only if it wouldn't otherwise fit. CSS animates both as transforms,
+ * so the reading is never redrawn mid-lift.
+ */
+function fitLid() {
+  const tray = ui.dashboard.offsetHeight;
+  const visible = ui.reading.clientHeight - tray;
+  const fit = Math.min(1, (visible - 24) / (reading.compositionHeight || 1));
+  ui.device.style.setProperty('--tray', `${tray}px`);
+  ui.device.style.setProperty('--shift', `${-tray / 2}px`);
+  ui.device.style.setProperty('--fit', Math.max(0.4, fit).toFixed(3));
+}
+
+// ---------- Storage ----------
+
+function loadSettings(): Settings {
+  let saved: Record<string, unknown> = {};
   try {
-    const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? '{}');
-    const steps = saved.brightness;
-    return {
-      // Older versions saved brightness as a 0..1 fraction; those fall back to the default.
-      brightness: Number.isInteger(steps) && Math.abs(steps) <= BRIGHTNESS_STEPS ? steps : defaults.brightness,
-      glow: saved.glow in GLOW ? saved.glow : defaults.glow,
-    };
+    saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? '{}');
   } catch {
-    return defaults;
+    // Storage unavailable or corrupt: defaults.
   }
+  const loaded = { ...DEFAULTS };
+  for (const choice of Object.keys(CHOICES) as Choice[]) {
+    const value = saved[choice];
+    if ((CHOICES[choice] as readonly unknown[]).includes(value)) (loaded as Record<Choice, unknown>)[choice] = value;
+  }
+  // Contrast was called brightness before it became a -5..+5 dial.
+  const contrast = saved.contrast ?? saved.brightness;
+  if (Number.isInteger(contrast) && Math.abs(contrast as number) <= CONTRAST_STEPS) loaded.contrast = contrast as number;
+  const sensitivity = saved.sensitivity;
+  if (Number.isInteger(sensitivity) && (sensitivity as number) >= 0 && (sensitivity as number) <= SENSITIVITY_STEPS) {
+    loaded.sensitivity = sensitivity as number;
+  }
+  return loaded;
 }
 
 function saveSettings() {
@@ -416,6 +583,8 @@ function saveSettings() {
     // Private mode or storage blocked: settings last for this session only.
   }
 }
+
+// ---------- Helpers ----------
 
 /** Solid square pixels into an SVG, one unit each, so the icon stays crisp at any size. */
 function drawPixels(svg: SVGSVGElement, rows: string[]) {

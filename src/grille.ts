@@ -14,6 +14,7 @@ export class Grille {
   private shown = -1;
   private level = 0;
   private glow = 6;
+  private colors = { bore: '#060708', lip: 'rgb(255 255 255 / 0.07)', lit: [244, 241, 232] };
 
   constructor(canvas: HTMLCanvasElement) {
     this.ctx = canvas.getContext('2d')!;
@@ -27,6 +28,12 @@ export class Grille {
     this.ctx.canvas.height = Math.round(height * this.ratio);
     this.cols = Math.floor(width / PITCH);
     this.rows = Math.floor(height / PITCH);
+    this.redraw();
+  }
+
+  /** The holes, their lit lower lip, and the light that shines through them. */
+  setColors(colors: { bore: string; lip: string; lit: number[] }) {
+    this.colors = colors;
     this.redraw();
   }
 
@@ -55,14 +62,15 @@ export class Grille {
         const y = top + r * PITCH;
         const height = this.rows - 1 - r; // 0 is the bottom row
         if (height < lit) {
-          ctx.shadowColor = 'rgb(244 241 232 / 0.8)';
+          const [r, g, b] = this.colors.lit;
+          ctx.shadowColor = `rgb(${r} ${g} ${b} / 0.8)`;
           ctx.shadowBlur = this.glow;
-          this.hole(x, y, `rgb(244 241 232 / ${(0.5 + (0.4 * height) / this.rows).toFixed(3)})`);
+          this.hole(x, y, `rgb(${r} ${g} ${b} / ${(0.5 + (0.4 * height) / this.rows).toFixed(3)})`);
           ctx.shadowBlur = 0;
         } else {
           // A dark bore with a faint lit lower lip.
-          this.hole(x, y + 0.6, 'rgb(255 255 255 / 0.07)');
-          this.hole(x, y, '#060708');
+          this.hole(x, y + 0.6, this.colors.lip);
+          this.hole(x, y, this.colors.bore);
         }
       }
     }
