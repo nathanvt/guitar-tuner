@@ -36,8 +36,14 @@ const LOCK_GLOW_BARS = 2;
 /** How far the outermost bar trails the center as the confirmation comes in, as a fraction of it. */
 const ARC_STAGGER = 0.5;
 const GLOW_STAGGER = 0.5;
-/** Height of the whole composition, arc to note, in radii. */
-const COMPOSITION = 2.26;
+/** Height of the whole composition, lit center bar to the note's foot, in radii. */
+const COMPOSITION = 2.28;
+/** Where the composition's middle sits, as a fraction of the screen's height from the top. */
+const OPTICAL_CENTER = 0.46;
+/** Space kept clear at the screen's top and bottom edges, in CSS pixels. */
+const MARGIN = 12;
+/** The note's top, in radii above the arc's center. */
+const NOTE_DROP = 0.3;
 
 // While the mic starts, waves of light radiate out from the center bar: each bar
 // pulses from `rest` to `peak`, the ends a little after the center.
@@ -275,11 +281,15 @@ function layout(width: number, height: number): Layout {
   const bar = radius * 0.2;
   const pitch = radius * 0.19;
   const small = pitch * 0.38;
-  // The tallest mark is the lit center bar.
-  const reach = radius - bar / 2 + bar * CENTER * (1 + GROW);
-  const top = (height - radius * COMPOSITION) / 2;
   const cx = width / 2;
-  const cy = top + reach;
+  // Center what's visible at rest (arc tip to note foot) on the optical center, a
+  // little above the true middle, while leaving room for the lit center bar on top
+  // and the note's foot below.
+  const restTop = radius - bar / 2 + bar * CENTER;
+  const litTop = radius - bar / 2 + bar * CENTER * (1 + GROW);
+  const foot = -radius * NOTE_DROP + GLYPH_HEIGHT * pitch;
+  const optical = height * OPTICAL_CENTER + (restTop - foot) / 2;
+  const cy = Math.min(height - MARGIN - foot, Math.max(MARGIN + litTop, optical));
 
   // The letter is centered on its own, so it lines up with the center bar and holds
   // still when a sharp comes and goes.
@@ -292,7 +302,7 @@ function layout(width: number, height: number): Layout {
     pitch,
     small,
     noteX: cx - (GLYPH_WIDTH * pitch) / 2,
-    noteY: cy - radius * 0.3,
+    noteY: cy - radius * NOTE_DROP,
     sideX: cx + (GLYPH_WIDTH * pitch) / 2 + pitch * 0.35,
   };
 }

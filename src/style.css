@@ -42,6 +42,8 @@
   --pilot-on: #2ee27a;
   --pilot-off: #1d4630;
   --orange: #ff8a1f;
+  --segment-track: #14171c;
+  --segment-thumb: #363a41;
 
   /* Set from the settings at runtime. */
   --good-rgb: 46 226 122;
@@ -80,6 +82,8 @@
   --pilot-on: #129a4a;
   --pilot-off: #bccdbd;
   --orange: #d9650a;
+  --segment-track: #c8bfab;
+  --segment-thumb: #f8f4ec;
 }
 
 * {
@@ -416,7 +420,7 @@ h2 {
   Push keys. --lift is how far the cap stands above the well; the hard side below it
   is exactly that tall, so its foot never moves.
     out       5px
-    latched   2px  (aria-pressed / aria-checked / aria-selected)
+    latched   2px  (aria-pressed)
     pressed   0px  (finger down)
 */
 .key {
@@ -441,7 +445,7 @@ h2 {
   -webkit-tap-highlight-color: transparent;
 }
 
-.key:is([aria-pressed='true'], [aria-checked='true'], [aria-selected='true']) {
+.key[aria-pressed='true'] {
   --lift: 2px;
 }
 
@@ -467,7 +471,7 @@ h2 {
   transition: color 140ms;
 }
 
-.key:is([aria-pressed='true'], [aria-checked='true'], [aria-selected='true']) .legend {
+.key[aria-pressed='true'] .legend {
   color: var(--ink);
 }
 
@@ -485,25 +489,73 @@ h2 {
   width: 100%;
 }
 
-/* The small keys in the tray: setting banks and page keys. */
-.key-mini {
-  width: 46px;
-  height: 34px;
+/*
+  Segmented controls, for the settings and the tray's pages: a flat track with a
+  highlight (--index of --count) that slides under the selected segment.
+*/
+.segmented {
+  position: relative;
+  display: grid;
+  grid-auto-columns: 1fr;
+  grid-auto-flow: column;
+  width: 100%;
+  height: 32px;
+  padding: 3px;
+  border-radius: 9px;
+  background: var(--segment-track);
+}
+
+.segmented .thumb {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 3px;
+  width: calc((100% - 6px) / var(--count, 2));
+  border-radius: 6px;
+  background: var(--segment-thumb);
+  box-shadow:
+    inset 0 1px 0 var(--key-shine),
+    0 1px 3px rgb(0 0 0 / 0.25);
+  transform: translateX(calc(var(--index, 0) * 100%));
+  transition: transform 220ms cubic-bezier(0.3, 0.9, 0.3, 1);
+}
+
+.segment {
+  position: relative;
+  display: grid;
+  place-items: center;
   padding: 0;
+  border: 0;
+  background: none;
+  color: var(--print);
+  font: inherit;
+  font-size: 8.5px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 160ms;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.key-tab {
-  height: 30px;
-  padding: 0 12px;
+.segment:is([aria-checked='true'], [aria-selected='true']) {
+  color: var(--ink);
 }
 
-.key-mini .legend,
-.key-tab .legend {
-  font-size: 8px;
-  letter-spacing: 0.1em;
+.segment:focus-visible {
+  outline: 2px solid var(--print-strong);
+  outline-offset: -2px;
+  border-radius: 6px;
 }
 
-/* A color key shows its pair as two swatches. */
+/* The page switch beside the tray's title. */
+.segmented.tabs {
+  flex: none;
+  width: 150px;
+  height: 28px;
+}
+
+/* A color segment shows its pair as two swatches. */
 .swatches {
   display: flex;
   gap: 4px;
@@ -660,7 +712,8 @@ h2 {
 @media (prefers-reduced-motion: reduce) {
   .key,
   .reading,
-  .screen-content {
+  .screen-content,
+  .segmented .thumb {
     transition: none;
   }
 

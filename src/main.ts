@@ -10,8 +10,8 @@ type Power = 'off' | 'starting' | 'on' | 'error';
 // ---------- Settings ----------
 
 /**
- * Every interlocking key bank in the controls tray. In the markup, a bank names its
- * setting in data-setting and each key its value in data-value.
+ * Every segmented control in the controls tray. In the markup, a control names its
+ * setting in data-setting and each segment its value in data-value.
  */
 const CHOICES = {
   colors: ['green-red', 'teal-magenta', 'blue-orange'],
@@ -196,14 +196,14 @@ new Dial(el('[data-dial="sensitivity"]'), {
   },
 });
 
-// Interlocking keys: touching one latches it at once and releases the others.
-for (const bank of all<HTMLElement>('[data-setting]')) {
-  const setting = bank.dataset.setting as Choice;
-  for (const key of bank.querySelectorAll<HTMLButtonElement>('[data-value]')) {
-    latchOnTouch(key, () => choose(setting, key.dataset.value!));
+// Segmented controls select the moment they're touched.
+for (const control of all<HTMLElement>('[data-setting]')) {
+  const setting = control.dataset.setting as Choice;
+  for (const segment of control.querySelectorAll<HTMLButtonElement>('[data-value]')) {
+    selectOnTouch(segment, () => choose(setting, segment.dataset.value!));
   }
 }
-for (const tab of ui.tabs) latchOnTouch(tab, () => showPage(tab.dataset.pageKey!));
+for (const tab of ui.tabs) selectOnTouch(tab, () => showPage(tab.dataset.pageKey!));
 
 const resizer = new ResizeObserver((entries) => {
   for (const { target, contentRect } of entries) {
@@ -272,16 +272,16 @@ function pushKey(key: HTMLButtonElement, action: () => void) {
   });
 }
 
-/** An interlocking key: it acts the moment it's touched, so it can latch straight away. */
-function latchOnTouch(key: HTMLButtonElement, action: () => void) {
-  key.addEventListener('pointerdown', () => {
-    key.classList.add('pressed');
-    action();
-  });
-  for (const type of ['pointerup', 'pointercancel', 'pointerleave'] as const) {
-    key.addEventListener(type, () => key.classList.remove('pressed'));
-  }
-  key.addEventListener('click', action); // keyboard
+/** A segment acts the moment it's touched; click covers the keyboard. */
+function selectOnTouch(segment: HTMLButtonElement, action: () => void) {
+  segment.addEventListener('pointerdown', action);
+  segment.addEventListener('click', action);
+}
+
+/** Slides a segmented control's highlight under its selected segment. */
+function placeThumb(control: HTMLElement, segments: HTMLElement[], selected: number) {
+  control.style.setProperty('--count', String(segments.length));
+  control.style.setProperty('--index', String(Math.max(0, selected)));
 }
 
 function choose(setting: Choice, value: string) {
@@ -310,13 +310,13 @@ function applySettings() {
   grille.setGlow(settings.theme === 'dark' ? glow.led : 0);
   ui.device.dataset.gradient = settings.gradient;
 
-  for (const bank of all<HTMLElement>('[data-setting]')) {
-    const current = settings[bank.dataset.setting as Choice];
-    for (const key of bank.querySelectorAll<HTMLElement>('[data-value]')) {
-      key.setAttribute('aria-checked', String(key.dataset.value === current));
-    }
+  for (const control of all<HTMLElement>('[data-setting]')) {
+    const current = settings[control.dataset.setting as Choice];
+    const segments = [...control.querySelectorAll<HTMLElement>('[data-value]')];
+    segments.forEach((segment) => segment.setAttribute('aria-checked', String(segment.dataset.value === current)));
+    placeThumb(control, segments, segments.findIndex((segment) => segment.dataset.value === current));
   }
-  // Color keys show their own pair, as this theme draws it, in two swatches.
+  // Color segments show their own pair, as this theme draws it, in two swatches.
   for (const key of all<HTMLElement>('[data-setting="colors"] [data-value]')) {
     const swatch = theme.pairs[key.dataset.value as Settings['colors']];
     const [good, bad] = key.querySelectorAll<HTMLElement>('.swatches i');
@@ -328,6 +328,7 @@ function applySettings() {
 /** Two pages share the tray; the hidden one keeps its space so the tray never resizes. */
 function showPage(page: string) {
   for (const tab of ui.tabs) tab.setAttribute('aria-selected', String(tab.dataset.pageKey === page));
+  placeThumb(ui.tabs[0].parentElement!, ui.tabs, ui.tabs.findIndex((tab) => tab.dataset.pageKey === page));
   for (const panel of ui.pages) {
     const shown = panel.dataset.page === page;
     panel.classList.toggle('shown', shown);
