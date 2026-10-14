@@ -45,6 +45,14 @@
   --segment-track: #14171c;
   --segment-thumb: #363a41;
 
+  /* Casing form, lit from above: gradient stops, bevel lines, the screen's recess. */
+  --casing-high: #232428;
+  --casing-low: #16171a;
+  --bevel-light: rgb(255 255 255 / 0.09);
+  --bevel-dark: rgb(0 0 0 / 0.6);
+  --edge-shade: rgb(0 0 0 / 0.28);
+  --recess: rgb(0 0 0 / 0.6);
+
   /* Set from the settings at runtime. */
   --good-rgb: 46 226 122;
   --bloom: 0.3;
@@ -84,6 +92,13 @@
   --orange: #d9650a;
   --segment-track: #dcd9d2;
   --segment-thumb: #ffffff;
+
+  --casing-high: #f6f4f0;
+  --casing-low: #e5e3dd;
+  --bevel-light: rgb(255 255 255 / 0.95);
+  --bevel-dark: rgb(40 35 25 / 0.16);
+  --edge-shade: rgb(40 35 25 / 0.06);
+  --recess: rgb(40 35 25 / 0.13);
 }
 
 * {
@@ -127,6 +142,16 @@ h2 {
   color: var(--ink);
 }
 
+/*
+  The casing, lit from above. Both bands shade a little toward their left and right
+  edges, as if the body rounds off there. The top band darkens toward its lip, which
+  faces down over the screen; the bottom band's top edge faces up and catches light.
+*/
+.brand,
+.panel {
+  --sides: linear-gradient(90deg, var(--edge-shade), transparent 7%, transparent 93%, var(--edge-shade));
+}
+
 /* The casing above the screen carries the name. */
 .brand {
   display: flex;
@@ -134,6 +159,10 @@ h2 {
   gap: 12px;
   padding: max(20px, env(safe-area-inset-top)) max(22px, env(safe-area-inset-right)) 18px
     max(22px, env(safe-area-inset-left));
+  background:
+    var(--sides),
+    linear-gradient(var(--panel), var(--casing-low));
+  box-shadow: inset 0 -1px 0 var(--bevel-dark);
 }
 
 .wordmark {
@@ -176,6 +205,34 @@ h2 {
 
 [data-panel='open'] .reading {
   clip-path: inset(0px 0px var(--tray, 0px) 0px);
+}
+
+/* The screen sits below the casing: the top band's overhang shades its top edge. */
+.reading::after {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 16px;
+  background: linear-gradient(var(--recess), transparent);
+  pointer-events: none;
+}
+
+/*
+  The screen's bottom edge: a little shade, then the dark seam where the screen meets
+  the bottom band's lit edge. It rides up with the lid when the controls open.
+*/
+.lid-edge {
+  position: absolute;
+  inset: auto 0 0;
+  height: 12px;
+  background: linear-gradient(transparent, var(--recess));
+  box-shadow: inset 0 -1px 0 var(--bevel-dark);
+  pointer-events: none;
+  transition: transform 320ms var(--lid);
+}
+
+[data-panel='open'] .lid-edge {
+  transform: translateY(calc(var(--tray, 0px) * -1));
 }
 
 .screen-content {
@@ -381,6 +438,10 @@ h2 {
   flex-direction: column;
   padding: 22px max(22px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom))
     max(22px, env(safe-area-inset-left));
+  background:
+    var(--sides),
+    linear-gradient(var(--casing-high), var(--panel) 45%);
+  box-shadow: inset 0 1px 0 var(--bevel-light);
 }
 
 .keys {
@@ -713,6 +774,7 @@ h2 {
   .key,
   .reading,
   .screen-content,
+  .lid-edge,
   .segmented .thumb {
     transition: none;
   }
