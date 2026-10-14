@@ -2,7 +2,7 @@
   A blocky, old-tech tuner: a casing with a screen running edge to edge across it, the
   reading lit on the screen, and a control panel of hard-edged keys and dials below.
   Two themes share every rule through the tokens on :root: dark (graphite casing,
-  black screen) and light (beige casing, cream screen, near-black ink). The reading's
+  black screen) and light (pale casing, near-white screen, near-black ink). The reading's
   good/bad pair comes from the color setting, through --good-rgb.
 */
 
@@ -57,33 +57,33 @@
   -webkit-text-size-adjust: 100%;
 }
 
-/* Light: beige casing, a cream screen, and near-black ink, the reverse of dark. */
+/* Light: a pale casing, a near-white screen, and near-black ink, the reverse of dark. */
 :root[data-theme='light'] {
   color-scheme: light;
 
-  --space: #f4efe4;
-  --panel: #e2dbcb;
-  --well: #cbc2ae;
-  --well-shade: rgb(60 50 30 / 0.3);
-  --tray-color: #d5cdbb;
-  --tray-shade: rgb(60 50 30 / 0.3);
-  --rule: rgb(0 0 0 / 0.12);
-  --ink: #1c1b18;
-  --legend: #3d3a32;
-  --print: #7b7466;
-  --print-strong: #4b473e;
-  --key-cap: #ede7da;
-  --key-cap-power: #f6f1e6;
-  --key-side: #b4ab97;
-  --key-shine: rgb(255 255 255 / 0.7);
-  --knob: #ebe5d8;
-  --knob-ring: #e3dccd;
-  --knob-side: #b1a894;
+  --space: #fbfaf7;
+  --panel: #efede8;
+  --well: #dcd9d2;
+  --well-shade: rgb(40 35 25 / 0.18);
+  --tray-color: #e5e3de;
+  --tray-shade: rgb(40 35 25 / 0.18);
+  --rule: rgb(0 0 0 / 0.1);
+  --ink: #1a1a18;
+  --legend: #3a3935;
+  --print: #85827a;
+  --print-strong: #4a4843;
+  --key-cap: #f8f7f4;
+  --key-cap-power: #fdfcfa;
+  --key-side: #c4c0b7;
+  --key-shine: rgb(255 255 255 / 0.85);
+  --knob: #f6f5f1;
+  --knob-ring: #edebe6;
+  --knob-side: #c2bdb3;
   --pilot-on: #129a4a;
-  --pilot-off: #bccdbd;
+  --pilot-off: #c6d6c8;
   --orange: #d9650a;
-  --segment-track: #c8bfab;
-  --segment-thumb: #f8f4ec;
+  --segment-track: #dcd9d2;
+  --segment-thumb: #ffffff;
 }
 
 * {
@@ -220,7 +220,7 @@ h2 {
   opacity: var(--bloom);
 }
 
-/* On cream, the dark note's halo reads as a smudge, so the glow is gentler. */
+/* On white, the dark note's halo reads as a smudge, so the glow is gentler. */
 :root[data-theme='light'] .screen-content .bloom {
   opacity: calc(var(--bloom) * 0.6);
 }

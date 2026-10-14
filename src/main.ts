@@ -72,9 +72,9 @@ const THEMES = {
     },
   },
   light: {
-    themeColor: '#e2dbcb',
-    tones: { idle: [204, 196, 179], note: [28, 27, 24], rest: [214, 207, 192], peak: [86, 81, 71] },
-    grille: { bore: '#8f8672', lip: 'rgb(255 255 255 / 0.45)', lit: [28, 27, 24] },
+    themeColor: '#efede8',
+    tones: { idle: [206, 203, 196], note: [26, 26, 24], rest: [226, 223, 217], peak: [88, 86, 80] },
+    grille: { bore: '#9b978d', lip: 'rgb(255 255 255 / 0.6)', lit: [26, 26, 24] },
     pairs: {
       'green-red': { good: [18, 152, 74], bad: [212, 42, 30] },
       'teal-magenta': { good: [8, 150, 140], bad: [200, 30, 122] },
@@ -306,7 +306,7 @@ function applySettings() {
   ui.root.style.setProperty('--bloom', String(glow.bloom));
   ui.root.style.setProperty('--bloom-blur', `${glow.blur}px`);
   ui.root.style.setProperty('--led-glow', `${glow.led}px`);
-  // Light glowing around dark holes would read as a smudge on the cream casing.
+  // Light glowing around dark holes would read as a smudge on the pale casing.
   grille.setGlow(settings.theme === 'dark' ? glow.led : 0);
   ui.device.dataset.gradient = settings.gradient;
 
