@@ -550,7 +550,8 @@ function fitLid() {
   const fit = Math.min(1, (visible - 24) / (reading.compositionHeight || 1));
   ui.device.style.setProperty('--tray', `${tray}px`);
   ui.device.style.setProperty('--shift', `${-tray / 2}px`);
-  ui.device.style.setProperty('--fit', Math.max(0.4, fit).toFixed(3));
+  // The reading gives way generously: the tray's room matters more while it's open.
+  ui.device.style.setProperty('--fit', Math.max(0.25, fit).toFixed(3));
 }
 
 // ---------- Storage ----------
