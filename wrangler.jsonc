@@ -1,0 +1,12 @@
+{
+  // Static app on Workers static assets. No `main` entry: with no Worker script,
+  // every request is served straight from the built files, which is all the tuner
+  // needs and cheaper than invoking a Worker per hit.
+  "name": "guitar-tuner",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./dist/",
+    // One page: any other path serves the tuner rather than an error.
+    "not_found_handling": "single-page-application"
+  }
+}

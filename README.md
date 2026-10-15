@@ -34,6 +34,14 @@ The microphone only works over https, so the phone has to use the tunnel URL, no
 
 `npm run dev` runs the hot-reloading dev server on the same port. Use `serve` for phone tests: the tunnel then exposes only built files, and the service worker behaves as it will in production.
 
+## Deploy
+
+The tuner is a static app on a Cloudflare Worker (static assets only, no Worker script; see `wrangler.jsonc`):
+
+```bash
+npm run deploy    # build, then wrangler deploy
+```
+
 ## Install on iPhone
 
 Open the tunnel URL in Safari, then Share → Add to Home Screen.

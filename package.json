@@ -8,6 +8,7 @@
     "build": "tsc --noEmit && vite build",
     "serve": "npm run build && vite preview --host 127.0.0.1 --port 4750 --strictPort",
     "tunnel": "cloudflared tunnel --no-autoupdate --url http://127.0.0.1:4750",
+    "deploy": "npm run build && wrangler deploy",
     "check:pitch": "node scripts/check-pitch.mjs",
     "icons": "node scripts/make-icons.mjs"
   },
@@ -18,6 +19,7 @@
   "devDependencies": {
     "typescript": "^7.0.2",
     "vite": "^8.3.4",
-    "vite-plugin-pwa": "^2.0.0"
+    "vite-plugin-pwa": "^2.0.0",
+    "wrangler": "^4.149.0"
   }
 }

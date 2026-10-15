@@ -3,3 +3,4 @@ dist
 dev-dist
 .tmp
 .DS_Store
+.wrangler
