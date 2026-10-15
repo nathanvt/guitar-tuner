@@ -36,15 +36,13 @@ The microphone only works over https, so the phone has to use the tunnel URL, no
 
 ## Deploy
 
-The tuner is a static app on a Cloudflare Worker (static assets only, no Worker script; see `wrangler.jsonc`):
+Live at **https://guitar-tuner.njvantwisk.workers.dev**.
 
-```bash
-npm run deploy    # build, then wrangler deploy
-```
+It's a static app on a Cloudflare Worker (static assets only, no Worker script; see `wrangler.jsonc`), built by Cloudflare's GitHub integration: **pushing `main` deploys**. `npm run deploy` (build, then `wrangler deploy`) is there for a manual deploy, but only with a Wrangler login for the right account.
 
 ## Install on iPhone
 
-Open the tunnel URL in Safari, then Share → Add to Home Screen.
+Open the live URL in Safari, then Share → Add to Home Screen.
 
 ## Checks
 
