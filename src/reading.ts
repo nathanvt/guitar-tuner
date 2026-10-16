@@ -38,6 +38,10 @@ const ARC_STAGGER = 0.5;
 const GLOW_STAGGER = 0.5;
 /** Height of the whole composition, lit center bar to the note's foot, in radii. */
 const COMPOSITION = 2.28;
+/** Width of the arc with its end bars lit, in radii. The note is narrower. */
+const COMPOSITION_WIDTH = 2.1;
+/** On big screens the reading stops growing here, in CSS pixels. */
+const MAX_RADIUS = 300;
 /** Where the composition's middle sits, as a fraction of the screen's height from the top. */
 const OPTICAL_CENTER = 0.46;
 /** Space kept clear at the screen's top and bottom edges, in CSS pixels. */
@@ -135,6 +139,11 @@ export class Reading {
   /** Height of the arc and note together, in CSS pixels. */
   get compositionHeight(): number {
     return this.layout ? this.layout.radius * COMPOSITION : 0;
+  }
+
+  /** Width of the arc and note together, in CSS pixels. */
+  get compositionWidth(): number {
+    return this.layout ? this.layout.radius * COMPOSITION_WIDTH : 0;
   }
 
   /** Vertical center of the note, in CSS pixels, for text that takes its place. */
@@ -277,7 +286,7 @@ function ripple(time: number, i: number, period: number): number {
 /** Sizes the arc to the space, then sets the note inside it. */
 function layout(width: number, height: number): Layout {
   // The composition is COMPOSITION radii tall and about 2.1 radii wide.
-  const radius = Math.min(width * 0.44, (height - 24) / COMPOSITION);
+  const radius = Math.min(width * 0.44, (height - 24) / COMPOSITION, MAX_RADIUS);
   const bar = radius * 0.2;
   const pitch = radius * 0.19;
   const small = pitch * 0.38;

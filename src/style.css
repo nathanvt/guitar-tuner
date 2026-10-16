@@ -133,6 +133,9 @@ h2 {
 /* ---------- Layout ---------- */
 
 .device {
+  /* Read by the script: 'stack' (portrait) or 'side' (landscape). */
+  --layout: stack;
+
   display: flex;
   flex-direction: column;
   width: 100vw;
@@ -782,5 +785,121 @@ h2 {
   [data-power='starting'] .pilot,
   [data-power='error'] .pilot {
     animation: none;
+  }
+}
+
+/* ---------- Wide portrait: tablets and tall desktop windows ---------- */
+
+/* The keys and the tray's contents keep a phone-like width, centered. */
+@media (orientation: portrait) and (min-width: 600px) {
+  .keys,
+  .dashboard-head,
+  .pages {
+    width: 100%;
+    max-width: 520px;
+    margin-inline: auto;
+  }
+}
+
+/* ---------- Landscape: phones on their side, and desktop windows ---------- */
+
+/*
+  Side by side: the screen runs the full height on the left, and the casing is a
+  column on the right, with the name at the top and the keys stacked at the bottom,
+  power last, where a thumb rests. The controls tray opens sideways: the screen's
+  right edge slides left to uncover it.
+*/
+@media (orientation: landscape) {
+  .device {
+    --layout: side;
+
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) clamp(196px, 21vw, 280px);
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas:
+      'stage brand'
+      'stage panel';
+  }
+
+  .stage {
+    grid-area: stage;
+    min-height: 0;
+  }
+
+  /* The column's edge facing the screen catches the light. */
+  .brand {
+    grid-area: brand;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: max(22px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) 0 20px;
+    background:
+      var(--sides),
+      linear-gradient(var(--casing-high), var(--panel));
+    box-shadow: inset 1px 0 0 var(--bevel-light);
+  }
+
+  .panel {
+    grid-area: panel;
+    justify-content: flex-end;
+    padding: 20px max(20px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) 20px;
+    background:
+      var(--sides),
+      var(--panel);
+    box-shadow: inset 1px 0 0 var(--bevel-light);
+  }
+
+  .keys {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+  }
+
+  .key-controls {
+    width: 100%;
+  }
+
+  .well-power {
+    flex: none;
+  }
+
+  /* No casing above the screen here, so no overhang shadow. */
+  .reading::after {
+    display: none;
+  }
+
+  [data-panel='open'] .reading {
+    clip-path: inset(0px var(--tray, 0px) 0px 0px);
+  }
+
+  [data-panel='open'] .screen-content {
+    transform: translateX(var(--shift, 0px)) scale(var(--fit, 1));
+  }
+
+  /* The screen's casing edge is its right edge, and it slides left with the lid. */
+  .lid-edge {
+    inset: 0 0 0 auto;
+    width: 12px;
+    height: auto;
+    background: linear-gradient(90deg, transparent, var(--recess));
+    box-shadow: inset -1px 0 0 var(--bevel-dark);
+  }
+
+  [data-panel='open'] .lid-edge {
+    transform: translateX(calc(var(--tray, 0px) * -1));
+  }
+
+  .dashboard {
+    left: auto;
+    top: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    width: min(380px, 78%);
+    padding: max(18px, env(safe-area-inset-top)) 20px max(18px, env(safe-area-inset-bottom));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    /* The slid-back screen's edge shades the tray's left side. */
+    box-shadow: inset 14px 0 16px -14px var(--tray-shade);
   }
 }

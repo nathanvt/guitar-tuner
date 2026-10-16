@@ -18,6 +18,8 @@ A blocky, old-tech tuner: a grey casing with a dark screen running edge to edge 
   Every setting is saved in the browser. With the tuner off, the reading shows a preview while the tray is open.
 - The power and controls keys stay down until their action has run, then move straight to their new position, so a key never bounces between states.
 - The reading sits on the screen's optical center (46% down) where there's room, and fills short screens evenly.
+- **Landscape and desktop:** whenever the window is wider than tall, the layout goes side by side. The screen runs the full height on the left; the casing is a column on the right, with the name at the top and the keys stacked at the bottom (mic, controls, then power). The controls tray opens sideways: the screen's right edge slides left to uncover it. On big screens the reading stops growing at a 300px radius.
+- **Wide portrait** (tablets, tall desktop windows) keeps the stacked layout with the keys and tray contents held to a phone-like width, centered.
 - **Mic grille** (`src/grille.ts`): sits over the phone's own microphone. Four holes across; they light from the bottom up with input level, like a peak meter.
 - Errors (mic blocked, busy, missing, no https) show where the note goes, under the grey gauge bars, with a pixel warning triangle and an orange title. The power key pops back up and its pilot flashes orange.
 - The page background is casing grey, so whatever Safari shows around the page matches the casing.
@@ -47,7 +49,7 @@ Open the live URL in Safari, then Share → Add to Home Screen.
 ## Checks
 
 - `npm run check:pitch` runs synthetic plucked strings through the real tracker. It covers every open string, detuned both ways, plus silence and noise.
-- `npm run icons` redraws `public/icons/*.png` and `public/favicon.svg` to match the tuner: the glowing green arc and a white pixel E on black with a soft radial light.
+- `npm run icons` redraws `public/icons/*.png` and `public/favicon.svg` to match the tuner: the glowing green arc and a white pixel E on black with a soft radial light, optically centered (the E is nudged right to offset its left-heavy spine).
 
 ## Dependency rule
 

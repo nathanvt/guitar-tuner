@@ -16,11 +16,16 @@ const GREEN = [46, 226, 122];
 const WHITE = [244, 243, 238];
 
 // Geometry in a 0..1 square. Every mark sits inside the maskable safe circle (radius 0.4).
-const ARC = { cx: 0.5, cy: 0.62, radius: 0.34, half: 4, sweep: (60 * Math.PI) / 180, length: 0.09, width: 0.05 };
+// Optically centered: the artwork's box sits dead center, which puts its visual mass
+// just above center, where an icon reads as centered.
+const ARC = { cx: 0.5, cy: 0.605, radius: 0.34, half: 4, sweep: (60 * Math.PI) / 180, length: 0.09, width: 0.05 };
 const CENTER_LENGTH = 1.3;
 const E = ['#####', '#....', '#....', '####.', '#....', '#....', '#####'];
 const PITCH = 0.046;
-const NOTE = { x: 0.5 - (5 * PITCH) / 2, y: 0.5 };
+// The E's spine makes it left-heavy (its mass sits about half a pixel left of its box),
+// so it's nudged right by part of that: a full correction would look shifted the other way.
+const E_NUDGE = 0.3 * PITCH;
+const NOTE = { x: 0.5 - (5 * PITCH) / 2 + E_NUDGE, y: 0.485 };
 
 const bars = [];
 for (let i = -ARC.half; i <= ARC.half; i++) {

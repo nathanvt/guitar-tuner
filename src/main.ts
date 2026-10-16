@@ -539,15 +539,19 @@ function showLock(amount: number) {
 }
 
 /**
- * How the screen lifts to uncover the controls tray: its bottom edge rises by the
- * tray's height, and the reading moves up by half that so it stays centered in what's
- * left, shrinking only if it wouldn't otherwise fit. CSS animates both as transforms,
- * so the reading is never redrawn mid-lift.
+ * How the screen opens to uncover the controls tray. Stacked (portrait), its bottom
+ * edge rises by the tray's height; side by side (landscape), its right edge slides
+ * left by the tray's width. Either way the reading moves half that distance to stay
+ * centered in what's left, shrinking only if it wouldn't otherwise fit. CSS animates
+ * both as transforms, so the reading is never redrawn mid-move. The stylesheet says
+ * which layout is in force through --layout.
  */
 function fitLid() {
-  const tray = ui.dashboard.offsetHeight;
-  const visible = ui.reading.clientHeight - tray;
-  const fit = Math.min(1, (visible - 24) / (reading.compositionHeight || 1));
+  const side = getComputedStyle(ui.device).getPropertyValue('--layout').trim() === 'side';
+  const tray = side ? ui.dashboard.offsetWidth : ui.dashboard.offsetHeight;
+  const visible = (side ? ui.reading.clientWidth : ui.reading.clientHeight) - tray;
+  const needed = side ? reading.compositionWidth : reading.compositionHeight;
+  const fit = Math.min(1, (visible - 24) / (needed || 1));
   ui.device.style.setProperty('--tray', `${tray}px`);
   ui.device.style.setProperty('--shift', `${-tray / 2}px`);
   // The reading gives way generously: the tray's room matters more while it's open.
